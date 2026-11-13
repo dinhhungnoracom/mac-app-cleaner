@@ -11,9 +11,9 @@
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white&style=flat-square)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/badge/Release-v1.0.0-green.svg?style=flat-square)](releases/)
-[![GitHub Pages](https://img.shields.io/badge/Website-GitHub%20Pages-blueviolet?style=flat-square)](https://dinhdoong.github.io/mac-app-cleaner/)
+[![GitHub Pages](https://img.shields.io/badge/Website-GitHub%20Pages-blueviolet?style=flat-square)](https://dinhhungnoracom.github.io/mac-app-cleaner/)
 
-[**🌐 Trang chủ & Tải về (Website)**](https://dinhdoong.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.0.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
+[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.0.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
 
 </div>
 
@@ -79,7 +79,7 @@ xattr -cr /Applications/MacAppCleaner.app
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/dinhdoong/mac-app-cleaner.git
+git clone https://github.com/dinhhungnoracom/mac-app-cleaner.git
 cd mac-app-cleaner
 
 # 2. Build ứng dụng
