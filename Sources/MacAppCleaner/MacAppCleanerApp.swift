@@ -20,9 +20,9 @@ struct MacAppCleanerApp: App {
     var body: some Scene {
         WindowGroup("Mac App Cleaner") {
             ContentView(vm: vm)
-                .frame(minWidth: 960, minHeight: 620)
+                .frame(minWidth: 1080, minHeight: 660)
         }
-        .defaultSize(width: 1120, height: 720)
+        .defaultSize(width: 1200, height: 780)
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandMenu("Quét ứng dụng") {
@@ -30,6 +30,14 @@ struct MacAppCleanerApp: App {
                     Task { await vm.refresh() }
                 }
                 .keyboardShortcut("r", modifiers: .command)
+            }
+            CommandMenu("Điều hướng") {
+                ForEach(Array(MainTab.allCases.enumerated()), id: \.element.id) { index, tab in
+                    Button(tab.title) {
+                        vm.activeTab = tab
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                }
             }
         }
     }

@@ -28,6 +28,10 @@ struct ContentView: View {
                     inspectorPane
                         .frame(minWidth: 360, idealWidth: 430)
                 }
+            case .cleanup:
+                CleanupView(vm: vm)
+            case .disk:
+                DiskAnalyzerView(vm: vm)
             case .trash:
                 TrashView(vm: vm)
             case .monitor:
@@ -51,6 +55,16 @@ struct ContentView: View {
         .task {
             if vm.apps.isEmpty {
                 await vm.refresh()
+            }
+        }
+        .onChange(of: vm.activeTab) { tab in
+            if tab == .trash {
+                Task { await vm.refreshTrash() }
+            }
+            if tab == .monitor {
+                vm.startMonitorTimer()
+            } else {
+                vm.stopMonitorTimer()
             }
         }
         .alert("Chuyển \"\(vm.selectedApp?.name ?? "")\" vào Thùng rác?", isPresented: $showSingleConfirm) {
@@ -85,31 +99,14 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Mac App Cleaner")
                     .font(.title3.bold())
-                Text("Quét ứng dụng, dọn file rác & làm sạch Thùng rác")
+                Text("Quét app, dọn rác & làm sạch Thùng rác")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
+            .frame(width: 232, alignment: .leading)
 
-            Picker("", selection: $vm.activeTab) {
-                Label("Ứng dụng", systemImage: "square.grid.2x2").tag(MainTab.apps)
-                let trashLabel = vm.trashItems.isEmpty
-                    ? "Thùng rác"
-                    : "Thùng rác (\(vm.trashItems.count))"
-                Label(trashLabel, systemImage: "trash").tag(MainTab.trash)
-                Label("Giám sát", systemImage: "waveform.path.ecg").tag(MainTab.monitor)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 330)
-            .padding(.leading, 8)
-            .onChange(of: vm.activeTab) { tab in
-                if tab == .trash {
-                    Task { await vm.refreshTrash() }
-                } else if tab == .monitor {
-                    vm.startMonitorTimer()
-                } else {
-                    vm.stopMonitorTimer()
-                }
-            }
+            tabBar
 
             Spacer()
 
@@ -117,20 +114,11 @@ struct ContentView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Ổ đĩa Mac: Trống \(ByteFormat.string(from: disk.availableBytes)) / \(ByteFormat.string(from: disk.totalBytes))")
                         .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(width: 188, alignment: .trailing)
                     ProgressView(value: disk.usedFraction)
-                        .frame(width: 190)
-                }
-            }
-
-            if vm.activeTab == .apps {
-                Toggle(isOn: $vm.isBulkMode) {
-                    Label("Chọn nhiều", systemImage: "checklist")
-                }
-                .toggleStyle(.button)
-                .onChange(of: vm.isBulkMode) { enabled in
-                    if !enabled {
-                        vm.clearBulkSelection()
-                    }
+                        .frame(width: 140)
                 }
             }
 
@@ -139,6 +127,10 @@ struct ContentView: View {
                     switch vm.activeTab {
                     case .apps:
                         await vm.refresh()
+                    case .cleanup:
+                        await vm.scanJunk()
+                    case .disk:
+                        await vm.scanDisk()
                     case .trash:
                         await vm.refreshTrash()
                     case .monitor:
@@ -150,6 +142,8 @@ struct ContentView: View {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)
                         Text("Đang tải...")
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                 } else {
                     Label("Cập nhật", systemImage: "arrow.clockwise")
@@ -241,9 +235,62 @@ struct ContentView: View {
             }
             .labelsHidden()
             .frame(width: 200)
+
+            Toggle(isOn: $vm.isBulkMode) {
+                Label("Chọn nhiều", systemImage: "checklist")
+            }
+            .toggleStyle(.button)
+            .controlSize(.small)
+            .onChange(of: vm.isBulkMode) { enabled in
+                if !enabled {
+                    vm.clearBulkSelection()
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 1) {
+            ForEach(MainTab.allCases) { tab in
+                Button {
+                    vm.activeTab = tab
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: tab.symbolName)
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(tab.title)
+                            .font(.callout.weight(vm.activeTab == tab ? .semibold : .regular))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                        if tab == .trash, !vm.trashItems.isEmpty {
+                            Text("\(vm.trashItems.count)")
+                                .font(.caption2.weight(.bold))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.red.opacity(vm.activeTab == tab ? 0.85 : 0.14))
+                                .foregroundColor(vm.activeTab == tab ? .white : .red)
+                                .cornerRadius(999)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 6)
+                    .foregroundColor(vm.activeTab == tab ? .white : .primary)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(vm.activeTab == tab ? Color.accentColor : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("\(tab.title) (⌘\(MainTab.allCases.firstIndex(of: tab).map { $0 + 1 } ?? 1))")
+            }
+        }
+        .padding(3)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(9)
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.secondary.opacity(0.16)))
     }
 
     private var bulkActionBar: some View {

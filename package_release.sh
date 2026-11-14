@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PROJECT_DIR="$(pwd)"
 APP_NAME="MacAppCleaner"
-VERSION="1.0.0"
+VERSION="1.1.0"
 APP_BUNDLE="${PROJECT_DIR}/${APP_NAME}.app"
 RELEASES_DIR="${PROJECT_DIR}/releases"
 DOCS_DIR="${PROJECT_DIR}/docs"

@@ -35,6 +35,23 @@ final class AppStoreViewModel: ObservableObject {
     @Published var processSearchText: String = ""
     @Published var isRefreshingMonitor: Bool = false
 
+    // MARK: Cleanup tab
+    @Published var cleanupGroups: [JunkGroup] = []
+    @Published var isCleanupScanning: Bool = false
+    @Published var cleanupLastScan: Date?
+    @Published var cleanupHasScanned: Bool = false
+
+    // MARK: Disk tab
+    @Published var diskRootURL: URL = FileManager.default.homeDirectoryForCurrentUser
+    @Published var diskMinSize: Int64 = 100 * 1024 * 1024
+    @Published var diskFolders: [FolderUsage] = []
+    @Published var diskLargeFiles: [LargeFileItem] = []
+    @Published var diskSearchText: String = ""
+    @Published var diskShowHiddenFolders: Bool = true
+    @Published var isDiskScanning: Bool = false
+    @Published var diskHasScanned: Bool = false
+    private var diskScanGeneration = 0
+
     @Published var isRemoving: Bool = false
     @Published var statusBanner: (message: String, isError: Bool)?
 
@@ -481,5 +498,280 @@ final class AppStoreViewModel: ObservableObject {
 
         try? await Task.sleep(nanoseconds: 500_000_000)
         await refreshMonitor()
+    }
+
+    // MARK: - Cleanup
+
+    var cleanupSelectedItems: [JunkItem] {
+        cleanupGroups.flatMap(\.selectedItems)
+    }
+
+    var cleanupSelectedBytes: Int64 {
+        cleanupGroups.reduce(0) { $0 + $1.selectedBytes }
+    }
+
+    var cleanupSelectedCount: Int {
+        cleanupGroups.reduce(0) { $0 + $1.selectedItems.count }
+    }
+
+    var cleanupTotalBytes: Int64 {
+        cleanupGroups.reduce(0) { $0 + $1.totalBytes }
+    }
+
+    var cleanupItemCount: Int {
+        cleanupGroups.reduce(0) { $0 + $1.items.count }
+    }
+
+    func scanJunk() async {
+        guard !isCleanupScanning else { return }
+        isCleanupScanning = true
+        defer { isCleanupScanning = false }
+
+        var identifiers = Set(apps.map { $0.bundleID }.filter { !$0.isEmpty })
+        identifiers.insert("local.dinhdoong.MacAppCleaner")
+
+        let groups = await Task.detached(priority: .userInitiated) {
+            await CleanupScanner.scan(
+                categories: Set(JunkCategory.allCases),
+                installedBundleIDs: identifiers
+            )
+        }.value
+
+        cleanupGroups = groups
+        cleanupLastScan = Date()
+        cleanupHasScanned = true
+
+        if groups.isEmpty {
+            showBanner("Không tìm thấy dữ liệu rác đáng kể nào.", isError: false)
+        } else {
+            showBanner(
+                "Đã quét \(groups.count) nhóm — tìm thấy \(ByteFormat.string(from: cleanupTotalBytes)) có thể dọn.",
+                isError: false
+            )
+        }
+    }
+
+    func selectSafeJunk() {
+        for groupIndex in cleanupGroups.indices {
+            let safe = !cleanupGroups[groupIndex].category.requiresReview
+            for itemIndex in cleanupGroups[groupIndex].items.indices {
+                cleanupGroups[groupIndex].items[itemIndex].isSelected = safe
+            }
+        }
+    }
+
+    func clearJunkSelection() {
+        for groupIndex in cleanupGroups.indices {
+            for itemIndex in cleanupGroups[groupIndex].items.indices {
+                cleanupGroups[groupIndex].items[itemIndex].isSelected = false
+            }
+        }
+    }
+
+    func toggleJunkGroup(_ groupID: String) {
+        guard let index = cleanupGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let shouldSelect = !cleanupGroups[index].allSelected
+        for itemIndex in cleanupGroups[index].items.indices {
+            cleanupGroups[index].items[itemIndex].isSelected = shouldSelect
+        }
+    }
+
+    func toggleJunkItem(_ item: JunkItem) {
+        for groupIndex in cleanupGroups.indices {
+            if let itemIndex = cleanupGroups[groupIndex].items.firstIndex(where: { $0.id == item.id }) {
+                cleanupGroups[groupIndex].items[itemIndex].isSelected.toggle()
+                return
+            }
+        }
+    }
+
+    func setAllJunkExpanded(_ expanded: Bool) {
+        for index in cleanupGroups.indices {
+            cleanupGroups[index].isExpanded = expanded
+        }
+    }
+
+    func cleanSelectedJunk(permanently: Bool) async {
+        let targets = cleanupSelectedItems
+        guard !targets.isEmpty else { return }
+
+        isRemoving = true
+        defer { isRemoving = false }
+
+        let result = await Task.detached(priority: .userInitiated) {
+            await CleanupService.remove(items: targets, permanently: permanently)
+        }.value
+
+        for index in cleanupGroups.indices {
+            cleanupGroups[index].items.removeAll { result.removedPaths.contains($0.id) }
+        }
+        cleanupGroups.removeAll { $0.items.isEmpty }
+
+        if result.removedCount > 0 {
+            let verb = permanently ? "Đã xoá vĩnh viễn" : "Đã chuyển vào Thùng rác"
+            showBanner(
+                "\(verb) \(result.removedCount) mục (\(ByteFormat.string(from: result.freedBytes))).",
+                isError: !result.errors.isEmpty
+            )
+        } else {
+            showBanner(result.errors.first ?? "Không thể dọn các mục đã chọn.", isError: true)
+        }
+
+        diskStats = AppScanner.getDiskStats()
+    }
+
+    // MARK: - Disk analyzer
+
+    var diskRootLabel: String {
+        if let scope = DiskScope.matching(diskRootURL) {
+            return scope.title
+        }
+        return diskRootURL.lastPathComponent
+    }
+
+    var diskCanGoUp: Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        return diskRootURL.standardizedFileURL.path != home
+    }
+
+    var visibleDiskFolders: [FolderUsage] {
+        guard !diskShowHiddenFolders else { return diskFolders }
+        return diskFolders.filter { !$0.name.hasPrefix(".") }
+    }
+
+    var diskFoldersTotalBytes: Int64 {
+        DiskAnalyzer.estimatedRootSize(visibleDiskFolders)
+    }
+
+    var filteredLargeFiles: [LargeFileItem] {
+        let query = diskSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return diskLargeFiles }
+        return diskLargeFiles.filter {
+            "\($0.name) \($0.path)".lowercased().contains(query)
+        }
+    }
+
+    var diskSelectedFiles: [LargeFileItem] {
+        diskLargeFiles.filter(\.isSelected)
+    }
+
+    var diskSelectedBytes: Int64 {
+        diskSelectedFiles.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    func scanDisk() async {
+        diskScanGeneration += 1
+        let generation = diskScanGeneration
+        let root = diskRootURL.standardizedFileURL
+        let minSize = diskMinSize
+
+        isDiskScanning = true
+        diskFolders = []
+        diskLargeFiles = []
+
+        let folderTask = Task.detached(priority: .userInitiated) {
+            await DiskAnalyzer.folderUsage(of: root)
+        }
+        let fileTask = Task.detached(priority: .userInitiated) {
+            DiskAnalyzer.largeFiles(in: root, minSize: minSize)
+        }
+
+        // Hiển thị danh sách tệp ngay khi quét xong (nhanh hơn nhiều so với đo dung lượng thư mục).
+        let files = await fileTask.value
+        guard generation == diskScanGeneration else { return }
+        diskLargeFiles = files
+
+        let folders = await folderTask.value
+        guard generation == diskScanGeneration else { return }
+        diskFolders = folders
+        diskHasScanned = true
+        diskStats = AppScanner.getDiskStats()
+        isDiskScanning = false
+    }
+
+    /// Chỉ quét lại danh sách tệp lớn, giữ nguyên dung lượng thư mục đang hiển thị.
+    func rescanDiskFiles() async {
+        diskScanGeneration += 1
+        let generation = diskScanGeneration
+        let root = diskRootURL.standardizedFileURL
+        let minSize = diskMinSize
+
+        isDiskScanning = true
+        let files = await Task.detached(priority: .userInitiated) {
+            DiskAnalyzer.largeFiles(in: root, minSize: minSize)
+        }.value
+        guard generation == diskScanGeneration else { return }
+
+        diskLargeFiles = files
+        diskStats = AppScanner.getDiskStats()
+        isDiskScanning = false
+
+        let folders = await Task.detached(priority: .userInitiated) {
+            await DiskAnalyzer.folderUsage(of: root)
+        }.value
+        guard generation == diskScanGeneration else { return }
+        diskFolders = folders
+    }
+
+    func setDiskRoot(_ url: URL) async {
+        diskRootURL = url.standardizedFileURL
+        diskFolders = []
+        diskLargeFiles = []
+        diskSearchText = ""
+        await scanDisk()
+    }
+
+    func goUpDiskFolder() async {
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL
+        let current = diskRootURL.standardizedFileURL
+        guard current.path != home.path else { return }
+
+        let parent = current.deletingLastPathComponent().standardizedFileURL
+        guard parent.path == home.path || parent.path.hasPrefix(home.path + "/") else { return }
+        await setDiskRoot(parent)
+    }
+
+    func toggleDiskSelection(_ file: LargeFileItem) {
+        guard let index = diskLargeFiles.firstIndex(where: { $0.id == file.id }) else { return }
+        diskLargeFiles[index].isSelected.toggle()
+    }
+
+    func selectAllFilteredDiskFiles() {
+        let ids = Set(filteredLargeFiles.map(\.id))
+        for index in diskLargeFiles.indices where ids.contains(diskLargeFiles[index].id) {
+            diskLargeFiles[index].isSelected = true
+        }
+    }
+
+    func clearDiskSelection() {
+        for index in diskLargeFiles.indices {
+            diskLargeFiles[index].isSelected = false
+        }
+    }
+
+    func trashSelectedDiskFiles() async {
+        let targets = diskSelectedFiles
+        guard !targets.isEmpty else { return }
+
+        isRemoving = true
+        defer { isRemoving = false }
+
+        let result = await Task.detached(priority: .userInitiated) {
+            await DiskAnalyzer.moveToTrash(targets)
+        }.value
+
+        let removedIDs = Set(targets.map(\.id).filter { !FileManager.default.fileExists(atPath: $0) })
+        diskLargeFiles.removeAll { removedIDs.contains($0.id) }
+
+        if result.movedCount > 0 {
+            showBanner(
+                "Đã chuyển \(result.movedCount) tệp (\(ByteFormat.string(from: result.freedBytes))) vào Thùng rác.",
+                isError: !result.errors.isEmpty
+            )
+        } else {
+            showBanner(result.errors.first ?? "Không thể chuyển các tệp đã chọn.", isError: true)
+        }
+
+        await rescanDiskFiles()
     }
 }

@@ -70,10 +70,24 @@ struct LeftoverItem: Identifiable, Hashable {
 
 enum MainTab: String, CaseIterable, Identifiable {
     case apps = "Ứng dụng"
+    case cleanup = "Dọn dẹp"
+    case disk = "Ổ đĩa"
     case trash = "Thùng rác"
     case monitor = "Giám sát"
 
     var id: String { rawValue }
+
+    var title: String { rawValue }
+
+    var symbolName: String {
+        switch self {
+        case .apps: return "square.grid.2x2"
+        case .cleanup: return "sparkles"
+        case .disk: return "internaldrive"
+        case .trash: return "trash"
+        case .monitor: return "waveform.path.ecg"
+        }
+    }
 }
 
 struct SystemCPUMetrics {

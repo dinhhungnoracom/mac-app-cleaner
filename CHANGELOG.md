@@ -1,0 +1,55 @@
+# Changelog
+
+Mọi thay đổi đáng chú ý của Mac App Cleaner được ghi ở đây.
+Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
+
+## [1.1.0] — 2026-11-14
+
+### Thêm mới
+
+- **Tab Dọn dẹp (Smart Cleanup)** với 8 nhóm rác:
+  - Cache ứng dụng (`~/Library/Caches`)
+  - Logs & báo cáo lỗi (`~/Library/Logs`)
+  - Xcode: `DerivedData`, `iOS/watchOS/tvOS DeviceSupport`, `CoreSimulator/Caches`
+  - Sao lưu iPhone/iPad (`MobileSync/Backup`)
+  - Cache trình duyệt: Safari, Chrome, Edge, Firefox, Brave, Opera, Arc
+  - Cache trong `Containers` (chỉ mục ≥ 5 MB)
+  - Tệp tải về cũ hơn 90 ngày (mặc định không chọn)
+  - **Rác mồ côi**: thư mục còn lại của app đã gỡ (mặc định không chọn)
+- **Tab Ổ đĩa (Disk Analyzer)**:
+  - Đo dung lượng thực tế của từng thư mục con, drill-down bằng cách bấm vào thư mục
+  - Tìm tệp lớn theo ngưỡng 50 MB / 100 MB / 500 MB / 1 GB
+  - Lọc theo tên/đường dẫn, chọn nhiều tệp và chuyển vào Thùng rác
+  - Hiện/ẩn thư mục ẩn
+- **Tab bar 5 mục** thay cho segmented control cũ; phím tắt `⌘1` … `⌘5`
+- Nút "Chọn nhiều" được chuyển vào thanh công cụ của tab Ứng dụng
+
+### An toàn
+
+- Thêm lớp `CleanupSafety`: chỉ cho xoá đúng danh mục đã quét (cache, logs, Xcode, backup, Downloads...), chặn `/System`, `~/Library/Keychains`, thư mục gốc và `~/.Trash`
+- `DiskAnalyzer.isSafeToTrash` chặn xoá ngoài Home, các thư mục gốc (Desktop/Documents/Downloads/Library/...) và Keychains
+- Toàn bộ thao tác xoá mặc định đi qua Thùng rác macOS; chỉ xoá vĩnh viễn khi người dùng chọn rõ ràng
+- Tệp trong Downloads được kiểm tra lại tuổi (≥ 90 ngày) ngay tại thời điểm xoá
+
+### Hiệu năng
+
+- Quét cleanup chạy song song theo nhóm: ~6 giây cho 205 mục / 12,5 GB trên máy thử nghiệm
+- Tab Ổ đĩa hiển thị danh sách tệp lớn sau ~1 giây; dung lượng thư mục được tính tiếp ở nền
+- Cache kích thước thư mục theo từng lần quét, không quét lại khi quay lại tab
+
+### Sửa lỗi
+
+- Loại bỏ việc tính trùng cache trình duyệt (trước đây `~/Library/Caches/Google` và cache Chrome bị cộng hai lần)
+- Bỏ qua các mục 0 byte trong danh sách dọn dẹp
+- Header không còn bị chật khi cửa sổ ở kích thước tối thiểu
+
+## [1.0.0] — 2026-11-13
+
+### Thêm mới
+
+- Quét và gỡ ứng dụng trong `/Applications`, `~/Applications`, `/System/Applications`
+- Phát hiện file rác trong `~/Library` (Application Support, Caches, Preferences, Containers, Group Containers, Logs, Saved State, HTTPStorages, WebKit, LaunchAgents)
+- Chọn nhiều ứng dụng để gỡ hàng loạt
+- Tab Thùng rác: xem dung lượng, xoá từng mục hoặc dọn sạch
+- Tab Giám sát: CPU, RAM, ổ đĩa, danh sách tiến trình, thoát/force quit
+- Nhận diện nguồn cài (App Store / Homebrew / Direct), kiến trúc CPU, lần sử dụng cuối

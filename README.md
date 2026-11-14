@@ -10,12 +10,22 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple&style=flat-square)](https://apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white&style=flat-square)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.0.0-green.svg?style=flat-square)](releases/)
+[![Release](https://img.shields.io/badge/Release-v1.1.0-green.svg?style=flat-square)](releases/)
 [![GitHub Pages](https://img.shields.io/badge/Website-GitHub%20Pages-blueviolet?style=flat-square)](https://dinhhungnoracom.github.io/mac-app-cleaner/)
 
-[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.0.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
+[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.1.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
 
 </div>
+
+---
+
+## 🆕 Có gì mới ở v1.1.0
+
+- **Tab Dọn dẹp**: 8 nhóm rác được quét song song, có thanh dung lượng, chọn theo nhóm, xem chi tiết từng mục và chế độ xoá an toàn qua Thùng rác.
+- **Tab Ổ đĩa**: đo dung lượng thư mục, chuyển sang thư mục con, tìm tệp lớn theo ngưỡng và xoá an toàn.
+- **Rác mồ côi**: phát hiện tàn dư của ứng dụng đã gỡ, có bộ lọc nhà phát hành để giảm báo nhầm.
+- **Tab bar mới** 5 mục, phím tắt `⌘1` … `⌘5`, header gọn hơn; nút "Chọn nhiều" chuyển vào thanh công cụ của tab Ứng dụng.
+- Toàn bộ thao tác xoá đều đi qua lớp kiểm tra đường dẫn (`CleanupSafety` / `DiskAnalyzer.isSafeToTrash`), chặn `/System`, `~/Library/Keychains`, thư mục gốc và file đang dùng.
 
 ---
 
@@ -29,6 +39,9 @@
   - `Containers` & `Group Containers`
   - `Logs` & `Saved Application State`
   - `HTTPStorages`, `WebKit`, `LaunchAgents`
+- 🧼 **Dọn dẹp thông minh (Smart Cleanup)**: Quét một lượt cache ứng dụng, logs, `DerivedData`/`DeviceSupport` của Xcode, bản sao lưu iPhone/iPad, cache trình duyệt và cache trong `Containers`. Xem từng mục, chọn lọc rồi dọn vào Thùng rác hoặc xoá vĩnh viễn.
+- 💽 **Phân tích ổ đĩa (Disk Analyzer)**: Đo dung lượng thực tế của từng thư mục trong Home, drill-down không giới hạn, tìm nhanh các tệp lớn nhất (≥ 50 MB → 1 GB) và chuyển thẳng vào Thùng rác.
+- 👻 **Phát hiện rác mồ côi**: Dò các thư mục `Application Support`, `Preferences`, `Containers`, `Group Containers`, `LaunchAgents`... có tên bundle ID nhưng không còn ứng dụng nào sở hữu — kèm cảnh báo "Cần kiểm tra" và mặc định không chọn.
 - 📊 **Theo dõi hoạt động (Activity Monitor)**: Giám sát thời gian thực mức sử dụng CPU hệ thống, bộ nhớ RAM (đang dùng / trống / nén) và ổ đĩa. Hiển thị danh sách mọi tiến trình đang chạy theo % CPU, RAM và cho phép Thoát hoặc Buộc dừng (Force Quit) ngay lập tức.
 - 🗑️ **Tab chuyên biệt dọn Thùng rác (Clean Trash)**: Xem chi tiết dung lượng chiếm dụng trong `~/.Trash`, cho phép xoá vĩnh viễn từng mục đã chọn hoặc dọn sạch toàn bộ Thùng rác chỉ với 1 cú click.
 - 🛡️ **An toàn tuyệt đối**:
@@ -42,12 +55,12 @@
 ## 🚀 Tải về & Cài đặt / Download & Install
 
 ### Cách 1: Tải file `.dmg` (Khuyên dùng)
-1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.0.0.dmg) hoặc mục [Releases](../../releases).
-2. Mở file `MacAppCleaner-v1.0.0.dmg`.
+1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.1.0.dmg) hoặc mục [Releases](../../releases).
+2. Mở file `MacAppCleaner-v1.1.0.dmg`.
 3. Kéo biểu tượng **MacAppCleaner** vào thư mục **Applications**.
 
 ### Cách 2: Tải file `.zip`
-Tải bản [MacAppCleaner-v1.0.0.zip](docs/downloads/MacAppCleaner-v1.0.0.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
+Tải bản [MacAppCleaner-v1.1.0.zip](docs/downloads/MacAppCleaner-v1.1.0.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
 
 ---
 
@@ -124,14 +137,18 @@ mac-app-cleaner/
 ├── Sources/MacAppCleaner/         # Mã nguồn Swift / SwiftUI
 │   ├── MacAppCleanerApp.swift     # Điểm khởi chạy @main
 │   ├── ContentView.swift          # Giao diện chính (Tabs, SplitView)
-│   ├── TrashView.swift            # Giao diện dọn Thùng rác
-│   ├── ActivityMonitorView.swift  # Giao diện giám sát CPU, RAM & tiến trình
-│   ├── SystemMonitorService.swift # Đọc Mach host CPU, VM RAM & tiến trình ps
-│   ├── AppStoreViewModel.swift    # Quản lý trạng thái, quét & lọc
-│   ├── AppScanner.swift           # Quét /Applications và ~/Library
-│   ├── AppRemover.swift           # Xoá an toàn vào Trash
-│   ├── TrashService.swift         # Quét và dọn ~/.Trash
-│   └── Models.swift               # Data models
+│   ├── CleanupView.swift           # Giao diện tab Dọn dẹp
+│   ├── CleanupService.swift        # Quét rác, phát hiện rác mồ côi, lớp an toàn
+│   ├── DiskAnalyzerView.swift      # Giao diện tab Ổ đĩa
+│   ├── DiskAnalyzerService.swift   # Đo dung lượng thư mục & tìm tệp lớn
+│   ├── TrashView.swift             # Giao diện dọn Thùng rác
+│   ├── ActivityMonitorView.swift   # Giao diện giám sát CPU, RAM & tiến trình
+│   ├── SystemMonitorService.swift  # Đọc Mach host CPU, VM RAM & tiến trình ps
+│   ├── AppStoreViewModel.swift     # Quản lý trạng thái, quét & lọc
+│   ├── AppScanner.swift            # Quét /Applications và ~/Library
+│   ├── AppRemover.swift            # Xoá an toàn vào Trash
+│   ├── TrashService.swift          # Quét và dọn ~/.Trash
+│   └── Models.swift                # Data models
 ├── docs/                          # Website giới thiệu & tải về (GitHub Pages)
 │   ├── index.html
 │   ├── style.css
@@ -139,8 +156,8 @@ mac-app-cleaner/
 │   ├── assets/                    # Favicon & icon
 │   └── downloads/                 # File .dmg, .zip & checksums
 ├── releases/                      # Thư mục lưu bản release build
-│   ├── MacAppCleaner-v1.0.0.dmg
-│   ├── MacAppCleaner-v1.0.0.zip
+│   ├── MacAppCleaner-v1.1.0.dmg
+│   ├── MacAppCleaner-v1.1.0.zip
 │   └── checksums.sha256
 ├── .github/workflows/build.yml    # CI/CD tự động build & release
 ├── build_app.sh                   # Script build .app
@@ -154,3 +171,9 @@ mac-app-cleaner/
 ## 📜 Giấy phép / License
 
 Dự án này được phát hành dưới giấy phép [MIT License](LICENSE). Bạn hoàn toàn có thể tự do sử dụng, chỉnh sửa và đóng góp!
+
+---
+
+## 📝 Lịch sử thay đổi
+
+Xem [CHANGELOG.md](CHANGELOG.md) để biết chi tiết từng phiên bản.
