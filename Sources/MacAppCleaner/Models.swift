@@ -71,6 +71,63 @@ struct LeftoverItem: Identifiable, Hashable {
 enum MainTab: String, CaseIterable, Identifiable {
     case apps = "Ứng dụng"
     case trash = "Thùng rác"
+    case monitor = "Giám sát"
+
+    var id: String { rawValue }
+}
+
+struct SystemCPUMetrics {
+    let userPercent: Double
+    let systemPercent: Double
+    let idlePercent: Double
+    let totalUsagePercent: Double
+}
+
+struct SystemMemoryMetrics {
+    let totalBytes: UInt64
+    let usedBytes: UInt64
+    let freeBytes: UInt64
+    let activeBytes: UInt64
+    let wiredBytes: UInt64
+    let compressedBytes: UInt64
+
+    var usedFraction: Double {
+        guard totalBytes > 0 else { return 0 }
+        return min(1.0, max(0.0, Double(usedBytes) / Double(totalBytes)))
+    }
+}
+
+struct ProcessItem: Identifiable, Hashable {
+    let id: pid_t
+    let pid: pid_t
+    let name: String
+    let cpuPercent: Double
+    let memoryBytes: Int64
+    let executablePath: String
+    let appURL: URL?
+    let isGUIApp: Bool
+    let bundleID: String?
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(pid)
+    }
+
+    static func == (lhs: ProcessItem, rhs: ProcessItem) -> Bool {
+        lhs.pid == rhs.pid
+    }
+}
+
+enum ProcessFilter: String, CaseIterable, Identifiable {
+    case appsOnly = "Chỉ ứng dụng"
+    case all = "Tất cả tiến trình"
+
+    var id: String { rawValue }
+}
+
+enum ProcessSort: String, CaseIterable, Identifiable {
+    case cpuDesc = "CPU: Cao nhất"
+    case memoryDesc = "RAM: Nhiều nhất"
+    case nameAsc = "Tên: A → Z"
 
     var id: String { rawValue }
 }

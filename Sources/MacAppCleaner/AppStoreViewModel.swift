@@ -27,10 +27,19 @@ final class AppStoreViewModel: ObservableObject {
     @Published var trashSearchText: String = ""
     @Published var trashSort: TrashSort = .sizeDesc
 
+    @Published var cpuMetrics: SystemCPUMetrics?
+    @Published var memoryMetrics: SystemMemoryMetrics?
+    @Published var processes: [ProcessItem] = []
+    @Published var processFilter: ProcessFilter = .appsOnly
+    @Published var processSort: ProcessSort = .cpuDesc
+    @Published var processSearchText: String = ""
+    @Published var isRefreshingMonitor: Bool = false
+
     @Published var isRemoving: Bool = false
     @Published var statusBanner: (message: String, isError: Bool)?
 
     private var iconCache: [String: NSImage] = [:]
+    private var monitorTimer: Timer?
 
     var selectedApp: InstalledApp? {
         guard let selectedAppID else { return nil }
@@ -376,5 +385,101 @@ final class AppStoreViewModel: ObservableObject {
                 statusBanner = nil
             }
         }
+    }
+
+    // MARK: - Activity Monitor
+
+    var filteredProcesses: [ProcessItem] {
+        let q = processSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        let filtered = processes.filter { item in
+            if processFilter == .appsOnly {
+                if !item.isGUIApp && item.appURL == nil { return false }
+            }
+            if !q.isEmpty {
+                let pidStr = String(item.pid)
+                let hay = "\(item.name) \(item.executablePath) \(pidStr)".lowercased()
+                if !hay.contains(q) { return false }
+            }
+            return true
+        }
+
+        switch processSort {
+        case .cpuDesc:
+            return filtered.sorted { $0.cpuPercent > $1.cpuPercent }
+        case .memoryDesc:
+            return filtered.sorted { $0.memoryBytes > $1.memoryBytes }
+        case .nameAsc:
+            return filtered.sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+        }
+    }
+
+    func iconForProcess(_ item: ProcessItem) -> NSImage {
+        if let url = item.appURL {
+            return icon(forPath: url.path)
+        }
+        return icon(forPath: item.executablePath)
+    }
+
+    func refreshMonitor() async {
+        isRefreshingMonitor = true
+        defer { isRefreshingMonitor = false }
+
+        let cpu = await Task.detached(priority: .userInitiated) {
+            SystemMonitorService.shared.getCPUMetrics()
+        }.value
+
+        let mem = await Task.detached(priority: .userInitiated) {
+            SystemMonitorService.shared.getMemoryMetrics()
+        }.value
+
+        let procs = await Task.detached(priority: .userInitiated) {
+            SystemMonitorService.shared.getProcesses()
+        }.value
+
+        self.cpuMetrics = cpu
+        self.memoryMetrics = mem
+        self.processes = procs
+        self.diskStats = AppScanner.getDiskStats()
+    }
+
+    func startMonitorTimer() {
+        stopMonitorTimer()
+        Task { await refreshMonitor() }
+
+        monitorTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.activeTab == .monitor else { return }
+                await self.refreshMonitor()
+            }
+        }
+        if let timer = monitorTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    func stopMonitorTimer() {
+        monitorTimer?.invalidate()
+        monitorTimer = nil
+    }
+
+    func terminateProcess(_ item: ProcessItem, force: Bool) async {
+        let success = await Task.detached(priority: .userInitiated) {
+            SystemMonitorService.shared.terminateProcess(pid: item.pid, force: force)
+        }.value
+
+        if success {
+            showBanner(
+                force ? "Đã buộc dừng tiến trình \(item.name) (PID \(item.pid))" : "Đã gửi lệnh thoát \(item.name)",
+                isError: false
+            )
+        } else {
+            showBanner("Không thể thoát tiến trình \(item.name) (cần quyền root hoặc đã tắt)", isError: true)
+        }
+
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        await refreshMonitor()
     }
 }

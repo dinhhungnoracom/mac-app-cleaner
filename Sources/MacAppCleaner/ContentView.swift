@@ -11,7 +11,8 @@ struct ContentView: View {
             headerBar
             Divider()
 
-            if vm.activeTab == .apps {
+            switch vm.activeTab {
+            case .apps:
                 statsStrip
                 Divider()
                 toolbar
@@ -27,8 +28,10 @@ struct ContentView: View {
                     inspectorPane
                         .frame(minWidth: 360, idealWidth: 430)
                 }
-            } else {
+            case .trash:
                 TrashView(vm: vm)
+            case .monitor:
+                ActivityMonitorView(vm: vm)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -93,13 +96,18 @@ struct ContentView: View {
                     ? "Thùng rác"
                     : "Thùng rác (\(vm.trashItems.count))"
                 Label(trashLabel, systemImage: "trash").tag(MainTab.trash)
+                Label("Giám sát", systemImage: "waveform.path.ecg").tag(MainTab.monitor)
             }
             .pickerStyle(.segmented)
-            .frame(width: 240)
+            .frame(width: 330)
             .padding(.leading, 8)
             .onChange(of: vm.activeTab) { tab in
                 if tab == .trash {
                     Task { await vm.refreshTrash() }
+                } else if tab == .monitor {
+                    vm.startMonitorTimer()
+                } else {
+                    vm.stopMonitorTimer()
                 }
             }
 
@@ -128,24 +136,27 @@ struct ContentView: View {
 
             Button {
                 Task {
-                    if vm.activeTab == .apps {
+                    switch vm.activeTab {
+                    case .apps:
                         await vm.refresh()
-                    } else {
+                    case .trash:
                         await vm.refreshTrash()
+                    case .monitor:
+                        await vm.refreshMonitor()
                     }
                 }
             } label: {
-                if vm.isScanning || vm.isScanningTrash {
+                if vm.isScanning || vm.isScanningTrash || vm.isRefreshingMonitor {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)
-                        Text("Đang quét...")
+                        Text("Đang tải...")
                     }
                 } else {
-                    Label("Quét lại", systemImage: "arrow.clockwise")
+                    Label("Cập nhật", systemImage: "arrow.clockwise")
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(vm.isScanning || vm.isScanningTrash || vm.isRemoving)
+            .disabled(vm.isScanning || vm.isScanningTrash || vm.isRefreshingMonitor || vm.isRemoving)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

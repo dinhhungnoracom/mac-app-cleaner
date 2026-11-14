@@ -472,6 +472,11 @@ a {
   color: #fca5a5;
 }
 
+.tab-badge.green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
 .window-spacer {
   width: 70px;
 }

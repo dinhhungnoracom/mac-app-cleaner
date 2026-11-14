@@ -37,22 +37,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Interactive Window Tab Toggle
   const tabAppsBtn = document.getElementById('tabAppsBtn');
   const tabTrashBtn = document.getElementById('tabTrashBtn');
+  const tabMonitorBtn = document.getElementById('tabMonitorBtn');
   const previewTabApps = document.getElementById('previewTabApps');
   const previewTabTrash = document.getElementById('previewTabTrash');
+  const previewTabMonitor = document.getElementById('previewTabMonitor');
 
-  if (tabAppsBtn && tabTrashBtn && previewTabApps && previewTabTrash) {
-    tabAppsBtn.addEventListener('click', () => {
-      tabAppsBtn.classList.add('active');
-      tabTrashBtn.classList.remove('active');
-      previewTabApps.classList.remove('hidden');
-      previewTabTrash.classList.add('hidden');
-    });
-
-    tabTrashBtn.addEventListener('click', () => {
-      tabTrashBtn.classList.add('active');
-      tabAppsBtn.classList.remove('active');
-      previewTabTrash.classList.remove('hidden');
-      previewTabApps.classList.add('hidden');
-    });
+  function selectTab(selectedBtn, selectedView) {
+    [tabAppsBtn, tabTrashBtn, tabMonitorBtn].forEach((b) => b?.classList.remove('active'));
+    [previewTabApps, previewTabTrash, previewTabMonitor].forEach((v) => v?.classList.add('hidden'));
+    selectedBtn?.classList.add('active');
+    selectedView?.classList.remove('hidden');
   }
+
+  tabAppsBtn?.addEventListener('click', () => selectTab(tabAppsBtn, previewTabApps));
+  tabTrashBtn?.addEventListener('click', () => selectTab(tabTrashBtn, previewTabTrash));
+  tabMonitorBtn?.addEventListener('click', () => selectTab(tabMonitorBtn, previewTabMonitor));
 });

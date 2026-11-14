@@ -85,12 +85,12 @@
           <div class="checksum-content hidden" id="checksumContent">
             <div class="checksum-line">
               <span class="checksum-file">MacAppCleaner-v1.0.0.dmg:</span>
-              <code id="dmgHash">707eb4d5bdfe16861d605c0a7e617fae8bcc4b632c20bada71aff2f480b0024c</code>
+              <code id="dmgHash">54d5924501f50f443aa5b1dc06bf5d2e129a308dc1ab64453639ecf4ef8936f0</code>
               <button class="btn-copy" data-target="dmgHash" type="button">Copy</button>
             </div>
             <div class="checksum-line">
               <span class="checksum-file">MacAppCleaner-v1.0.0.zip:</span>
-              <code id="zipHash">1f1c51c0207d462a68a40369850dfdb846c60e35c973f4a63f766c221568af68</code>
+              <code id="zipHash">9c3201ae94e630f14fc68510bbdfb8e34439adabc2dc75417dbc33f38ad5760a</code>
               <button class="btn-copy" data-target="zipHash" type="button">Copy</button>
             </div>
           </div>
@@ -122,6 +122,10 @@
             <button class="tab-btn" id="tabTrashBtn" type="button">
               <span>Thùng rác</span>
               <span class="tab-badge alt">Clean Trash</span>
+            </button>
+            <button class="tab-btn" id="tabMonitorBtn" type="button">
+              <span>Giám sát</span>
+              <span class="tab-badge green">Activity</span>
             </button>
           </div>
           <div class="window-spacer"></div>
@@ -299,6 +303,80 @@
             </div>
           </div>
         </div>
+
+        <!-- Window Body: Tab Monitor (Activity Monitor) -->
+        <div class="window-body hidden" id="previewTabMonitor">
+          <div class="preview-stats-bar">
+            <div class="p-stat">
+              <span class="lbl">CPU Hệ thống</span>
+              <strong style="color: #34d399;">18.5%</strong>
+              <span style="font-size: 10px; color: var(--text-muted);">User: 12.2% • System: 6.3%</span>
+            </div>
+            <div class="p-stat">
+              <span class="lbl">Bộ nhớ RAM</span>
+              <strong style="color: #60a5fa;">12.4 GB / 16.0 GB</strong>
+              <span style="font-size: 10px; color: var(--text-muted);">Trống: 3.6 GB • Nén: 1.2 GB</span>
+            </div>
+            <div class="p-stat accent">
+              <span class="lbl">Ổ đĩa Khởi động</span>
+              <strong>Trống 186.4 GB / 494.4 GB</strong>
+              <span style="font-size: 10px; color: var(--text-muted);">Tự cập nhật 2s</span>
+            </div>
+          </div>
+
+          <div class="trash-list-wrap" style="min-height: 280px;">
+            <div class="p-row">
+              <div class="p-row-icon">🌐</div>
+              <div class="p-row-meta">
+                <div class="p-row-title">
+                  <span>Google Chrome</span>
+                  <span class="pill-tag blue">App</span>
+                  <span class="pill-tag">PID 44886</span>
+                </div>
+                <span class="p-row-sub">/Applications/Google Chrome.app</span>
+              </div>
+              <div style="text-align: right; margin-right: 14px;">
+                <strong style="color: #f59e0b; display: block;">24.5% CPU</strong>
+                <span class="p-row-sub">805 MB RAM</span>
+              </div>
+              <button class="btn-fake-secondary" style="padding: 4px 10px; font-size: 11px;" type="button">Thoát</button>
+            </div>
+
+            <div class="p-row">
+              <div class="p-row-icon">🚀</div>
+              <div class="p-row-meta">
+                <div class="p-row-title">
+                  <span>Antigravity</span>
+                  <span class="pill-tag blue">App</span>
+                  <span class="pill-tag">PID 45061</span>
+                </div>
+                <span class="p-row-sub">/Applications/Antigravity.app</span>
+              </div>
+              <div style="text-align: right; margin-right: 14px;">
+                <strong style="color: #34d399; display: block;">12.1% CPU</strong>
+                <span class="p-row-sub">410 MB RAM</span>
+              </div>
+              <button class="btn-fake-secondary" style="padding: 4px 10px; font-size: 11px;" type="button">Thoát</button>
+            </div>
+
+            <div class="p-row">
+              <div class="p-row-icon">💬</div>
+              <div class="p-row-meta">
+                <div class="p-row-title">
+                  <span>Telegram</span>
+                  <span class="pill-tag blue">App</span>
+                  <span class="pill-tag">PID 38412</span>
+                </div>
+                <span class="p-row-sub">/Applications/Telegram.app</span>
+              </div>
+              <div style="text-align: right; margin-right: 14px;">
+                <strong style="color: #34d399; display: block;">1.8% CPU</strong>
+                <span class="p-row-sub">340 MB RAM</span>
+              </div>
+              <button class="btn-fake-secondary" style="padding: 4px 10px; font-size: 11px;" type="button">Thoát</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -311,6 +389,11 @@
       </div>
 
       <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Theo dõi hoạt động (Activity Monitor)</h3>
+          <p>Giám sát thời gian thực CPU, RAM, ổ đĩa và danh sách mọi tiến trình đang chạy. Cho phép đóng hoặc buộc dừng (Force Quit) nhanh các ứng dụng ngốn tài nguyên.</p>
+        </div>
         <div class="feature-card">
           <div class="feature-icon">⚡</div>
           <h3>100% Thuần Swift &amp; SwiftUI</h3>

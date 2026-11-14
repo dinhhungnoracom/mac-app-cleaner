@@ -29,6 +29,7 @@
   - `Containers` & `Group Containers`
   - `Logs` & `Saved Application State`
   - `HTTPStorages`, `WebKit`, `LaunchAgents`
+- 📊 **Theo dõi hoạt động (Activity Monitor)**: Giám sát thời gian thực mức sử dụng CPU hệ thống, bộ nhớ RAM (đang dùng / trống / nén) và ổ đĩa. Hiển thị danh sách mọi tiến trình đang chạy theo % CPU, RAM và cho phép Thoát hoặc Buộc dừng (Force Quit) ngay lập tức.
 - 🗑️ **Tab chuyên biệt dọn Thùng rác (Clean Trash)**: Xem chi tiết dung lượng chiếm dụng trong `~/.Trash`, cho phép xoá vĩnh viễn từng mục đã chọn hoặc dọn sạch toàn bộ Thùng rác chỉ với 1 cú click.
 - 🛡️ **An toàn tuyệt đối**:
   - Mọi ứng dụng bị gỡ đều được chuyển vào **Thùng rác macOS** trước (có thể khôi phục bất cứ lúc nào).
@@ -124,6 +125,8 @@ mac-app-cleaner/
 │   ├── MacAppCleanerApp.swift     # Điểm khởi chạy @main
 │   ├── ContentView.swift          # Giao diện chính (Tabs, SplitView)
 │   ├── TrashView.swift            # Giao diện dọn Thùng rác
+│   ├── ActivityMonitorView.swift  # Giao diện giám sát CPU, RAM & tiến trình
+│   ├── SystemMonitorService.swift # Đọc Mach host CPU, VM RAM & tiến trình ps
 │   ├── AppStoreViewModel.swift    # Quản lý trạng thái, quét & lọc
 │   ├── AppScanner.swift           # Quét /Applications và ~/Library
 │   ├── AppRemover.swift           # Xoá an toàn vào Trash
