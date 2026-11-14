@@ -75,26 +75,23 @@ struct DiskTrashResult {
 
 enum DiskAnalyzer {
     /// Dung lượng của từng thư mục con trực tiếp trong `root`.
-    static func folderUsage(of root: URL) async -> [FolderUsage] {
-        let fm = FileManager.default
-        guard let entries = try? fm.contentsOfDirectory(
-            at: root,
-            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
-            options: []
-        ) else {
-            return []
-        }
-
-        let folders = entries.filter { url in
+    /// `onPartial` được gọi ngay khi một thư mục đo xong để UI hiển thị dần.
+    static func folderUsage(
+        of root: URL,
+        onPartial: ((FolderUsage) -> Void)? = nil
+    ) async -> [FolderUsage] {
+        let directories = FastDiskSize.directEntries(of: root).filter { url in
             let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             return values?.isDirectory == true && values?.isSymbolicLink != true
         }
 
+        guard !directories.isEmpty else { return [] }
+
         return await withTaskGroup(of: FolderUsage?.self) { group in
-            for url in folders {
+            for url in directories {
                 group.addTask {
                     if Task.isCancelled { return nil }
-                    let size = AppScanner.allocatedSize(of: url)
+                    let size = await FastDiskSize.allocatedSizeConcurrent(of: url)
                     guard size > 0 else { return nil }
                     return FolderUsage(
                         id: url.standardizedFileURL.path,
@@ -107,7 +104,9 @@ enum DiskAnalyzer {
 
             var result: [FolderUsage] = []
             for await item in group {
-                if let item { result.append(item) }
+                guard let item else { continue }
+                result.append(item)
+                onPartial?(item)
             }
             return result.sorted { $0.sizeBytes > $1.sizeBytes }
         }

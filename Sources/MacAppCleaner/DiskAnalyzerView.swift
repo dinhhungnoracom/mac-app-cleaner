@@ -36,7 +36,7 @@ struct DiskAnalyzerView: View {
         }
         .onAppear {
             if !vm.diskHasScanned && !vm.isDiskScanning {
-                Task { await vm.scanDisk() }
+                Task { await vm.scanDisk(forceFolders: true) }
             }
         }
         .alert(
@@ -80,9 +80,13 @@ struct DiskAnalyzerView: View {
             )
 
             DiskStatCard(
-                title: "Thư mục lớn nhất",
-                value: ByteFormat.string(from: vm.diskFoldersTotalBytes),
-                subtitle: "\(vm.diskFolders.count) thư mục con trực tiếp",
+                title: "Dung lượng thư mục",
+                value: vm.isDiskFolderScanning && vm.diskFolders.isEmpty
+                    ? "Đang tính..."
+                    : ByteFormat.string(from: vm.diskFoldersTotalBytes),
+                subtitle: vm.isDiskFolderScanning
+                    ? "Đang đo \(vm.visibleDiskFolders.count) thư mục..."
+                    : "\(vm.visibleDiskFolders.count) thư mục con trực tiếp",
                 accent: .purple
             )
 
@@ -157,7 +161,7 @@ struct DiskAnalyzerView: View {
             Spacer()
 
             Button {
-                Task { await vm.scanDisk() }
+                Task { await vm.scanDisk(forceFolders: true) }
             } label: {
                 if vm.isDiskScanning {
                     HStack(spacing: 6) {
@@ -193,6 +197,14 @@ struct DiskAnalyzerView: View {
                 Toggle("Hiện mục ẩn", isOn: $vm.diskShowHiddenFolders)
                     .toggleStyle(.checkbox)
                     .font(.caption)
+                if vm.isDiskFolderScanning {
+                    HStack(spacing: 4) {
+                        ProgressView().controlSize(.mini)
+                        Text("đang tính...")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 Text(ByteFormat.string(from: vm.diskFoldersTotalBytes))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.secondary)
@@ -202,7 +214,7 @@ struct DiskAnalyzerView: View {
 
             Divider()
 
-            if vm.isDiskScanning && vm.diskFolders.isEmpty {
+            if vm.diskFolders.isEmpty && (vm.isDiskScanning || vm.isDiskFolderScanning) {
                 VStack(spacing: 10) {
                     ProgressView()
                     Text("Đang đo dung lượng thư mục...")
@@ -210,7 +222,7 @@ struct DiskAnalyzerView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if vm.visibleDiskFolders.isEmpty {
+            } else if vm.visibleDiskFolders.isEmpty && !vm.isDiskFolderScanning {
                 VStack(spacing: 8) {
                     Image(systemName: "folder")
                         .font(.system(size: 30))

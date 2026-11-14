@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 import MachO
 
@@ -6,8 +7,17 @@ final class SystemMonitorService {
     static let shared = SystemMonitorService()
 
     private var previousCPUTicks: (user: UInt64, system: UInt64, idle: UInt64, nice: UInt64)?
+    private var previousProcessTicks: [pid_t: (ticks: UInt64, time: Date)] = [:]
+    private var hasPrimedProcessSamples = false
+    private let timebaseNumer: Double
+    private let timebaseDenom: Double
 
-    private init() {}
+    private init() {
+        var timebase = mach_timebase_info_data_t()
+        mach_timebase_info(&timebase)
+        timebaseNumer = Double(timebase.numer)
+        timebaseDenom = Double(timebase.denom)
+    }
 
     func getCPUMetrics() -> SystemCPUMetrics {
         var size = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info_data_t>.size / MemoryLayout<integer_t>.size)
@@ -93,87 +103,128 @@ final class SystemMonitorService {
         )
     }
 
+    /// Đọc danh sách tiến trình trực tiếp qua libproc (nhanh hơn gọi `ps` ~10x
+    /// và không bị treo khi output vượt bộ đệm pipe).
     func getProcesses() -> [ProcessItem] {
+        // Lần đầu chưa có mốc thời gian để tính %CPU: lấy mẫu 2 lần cách nhau 250ms.
+        if !hasPrimedProcessSamples {
+            _ = sampleProcesses()
+            hasPrimedProcessSamples = true
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return sampleProcesses()
+    }
+
+    private func sampleProcesses() -> [ProcessItem] {
         let runningApps = NSWorkspace.shared.runningApplications
         var appByPID: [pid_t: NSRunningApplication] = [:]
+        appByPID.reserveCapacity(runningApps.count)
         for app in runningApps {
             appByPID[app.processIdentifier] = app
         }
 
-        let pipe = Pipe()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-axo", "pid,%cpu,rss,comm", "-r"]
-        process.standardOutput = pipe
+        var capacity = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
+        if capacity <= 0 { capacity = Int32(MemoryLayout<pid_t>.size) * 1024 }
+        var pids = [pid_t](repeating: 0, count: max(1024, Int(capacity) / MemoryLayout<pid_t>.size))
+        let used = proc_listpids(
+            UInt32(PROC_ALL_PIDS),
+            0,
+            &pids,
+            Int32(pids.count * MemoryLayout<pid_t>.size)
+        )
+        let count = max(0, Int(used) / MemoryLayout<pid_t>.size)
+        guard count > 0 else { return [] }
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return []
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else { return [] }
-
+        let now = Date()
+        var nextSamples: [pid_t: (ticks: UInt64, time: Date)] = [:]
+        nextSamples.reserveCapacity(count)
         var items: [ProcessItem] = []
-        let lines = output.components(separatedBy: "\n")
+        items.reserveCapacity(count)
 
-        for line in lines.dropFirst() {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
+        for index in 0..<count {
+            let pid = pids[index]
+            guard pid > 0 else { continue }
 
-            let parts = trimmed.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
-            guard parts.count >= 4,
-                  let pidInt = Int32(parts[0]),
-                  let cpuDouble = Double(parts[1]),
-                  let rssKb = Int64(parts[2]) else {
-                continue
-            }
+            var info = proc_taskinfo()
+            let read = proc_pidinfo(
+                pid,
+                PROC_PIDTASKINFO,
+                0,
+                &info,
+                Int32(MemoryLayout<proc_taskinfo>.size)
+            )
+            guard read == Int32(MemoryLayout<proc_taskinfo>.size) else { continue }
 
-            let execPath = String(parts[3])
-            let memBytes = rssKb * 1024
-
-            if let app = appByPID[pidInt] {
-                let appName = app.localizedName ?? app.bundleURL?.deletingPathExtension().lastPathComponent ?? (execPath as NSString).lastPathComponent
-                items.append(ProcessItem(
-                    id: pidInt,
-                    pid: pidInt,
-                    name: appName,
-                    cpuPercent: cpuDouble,
-                    memoryBytes: memBytes,
-                    executablePath: execPath,
-                    appURL: app.bundleURL,
-                    isGUIApp: true,
-                    bundleID: app.bundleIdentifier
-                ))
-            } else {
-                // Check if process belongs inside an .app bundle (e.g. Helper processes)
-                var enclosingAppURL: URL? = nil
-                var friendlyName = (execPath as NSString).lastPathComponent
-
-                if let appRange = execPath.range(of: ".app/") {
-                    let appPath = String(execPath[..<appRange.upperBound].dropLast())
-                    enclosingAppURL = URL(fileURLWithPath: appPath)
-                    let parentAppName = (appPath as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
-                    friendlyName = "\(parentAppName) (\(friendlyName))"
+            let ticks = info.pti_total_user &+ info.pti_total_system
+            var cpuPercent = 0.0
+            if let previous = previousProcessTicks[pid], ticks >= previous.ticks {
+                let elapsed = now.timeIntervalSince(previous.time)
+                if elapsed > 0.05 {
+                    let deltaNanoseconds = Double(ticks - previous.ticks) * timebaseNumer / timebaseDenom
+                    cpuPercent = max(0, deltaNanoseconds / 1_000_000_000.0 / elapsed * 100.0)
                 }
-
-                items.append(ProcessItem(
-                    id: pidInt,
-                    pid: pidInt,
-                    name: friendlyName,
-                    cpuPercent: cpuDouble,
-                    memoryBytes: memBytes,
-                    executablePath: execPath,
-                    appURL: enclosingAppURL,
-                    isGUIApp: false,
-                    bundleID: nil
-                ))
             }
+            nextSamples[pid] = (ticks, now)
+
+            let memoryBytes = Int64(info.pti_resident_size)
+            let app = appByPID[pid]
+            let identity = processIdentity(pid: pid, app: app)
+
+            items.append(
+                ProcessItem(
+                    id: pid,
+                    pid: pid,
+                    name: identity.name,
+                    cpuPercent: cpuPercent,
+                    memoryBytes: memoryBytes,
+                    executablePath: identity.path,
+                    appURL: identity.appURL,
+                    isGUIApp: app != nil,
+                    bundleID: app?.bundleIdentifier
+                )
+            )
         }
 
+        previousProcessTicks = nextSamples
         return items
+    }
+
+    private func processIdentity(
+        pid: pid_t,
+        app: NSRunningApplication?
+    ) -> (name: String, path: String, appURL: URL?) {
+        var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        let pathLength = proc_pidpath(pid, &pathBuffer, UInt32(pathBuffer.count))
+        let path = pathLength > 0 ? (String(validatingUTF8: pathBuffer) ?? "") : ""
+
+        if let app {
+            let name = app.localizedName
+                ?? app.bundleURL?.deletingPathExtension().lastPathComponent
+                ?? (path as NSString).lastPathComponent
+            return (name, path.isEmpty ? (app.bundleURL?.path ?? "") : path, app.bundleURL)
+        }
+
+        var nameBuffer = [CChar](repeating: 0, count: 1024)
+        let nameLength = proc_name(pid, &nameBuffer, UInt32(nameBuffer.count))
+        var name = nameLength > 0 ? (String(validatingUTF8: nameBuffer) ?? "") : ""
+        if name.isEmpty {
+            name = (path as NSString).lastPathComponent
+        }
+
+        var appURL: URL?
+        if let range = path.range(of: ".app/") {
+            let appPath = String(path[..<range.upperBound].dropLast())
+            appURL = URL(fileURLWithPath: appPath)
+            let parentName = (appPath as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
+            if !name.hasPrefix(parentName) {
+                name = "\(parentName) (\(name))"
+            }
+        } else if path.hasSuffix(".app") || path.contains(".app/Contents/MacOS/") {
+            appURL = URL(fileURLWithPath: path)
+        }
+
+        if name.isEmpty { name = "PID \(pid)" }
+        return (name, path, appURL)
     }
 
     func terminateProcess(pid: pid_t, force: Bool) -> Bool {

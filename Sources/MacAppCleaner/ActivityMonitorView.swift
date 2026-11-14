@@ -154,6 +154,7 @@ struct ActivityMonitorView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .frame(width: 230)
 
             Picker("Sắp xếp", selection: $vm.processSort) {

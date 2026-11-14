@@ -49,8 +49,10 @@ final class AppStoreViewModel: ObservableObject {
     @Published var diskSearchText: String = ""
     @Published var diskShowHiddenFolders: Bool = true
     @Published var isDiskScanning: Bool = false
+    @Published var isDiskFolderScanning: Bool = false
     @Published var diskHasScanned: Bool = false
     private var diskScanGeneration = 0
+    private var diskFolderTask: Task<Void, Never>?
 
     @Published var isRemoving: Bool = false
     @Published var statusBanner: (message: String, isError: Bool)?
@@ -441,6 +443,7 @@ final class AppStoreViewModel: ObservableObject {
     }
 
     func refreshMonitor() async {
+        guard !isRefreshingMonitor else { return }
         isRefreshingMonitor = true
         defer { isRefreshingMonitor = false }
 
@@ -659,34 +662,66 @@ final class AppStoreViewModel: ObservableObject {
         diskSelectedFiles.reduce(0) { $0 + $1.sizeBytes }
     }
 
-    func scanDisk() async {
+    func scanDisk(forceFolders: Bool = false) async {
         diskScanGeneration += 1
         let generation = diskScanGeneration
         let root = diskRootURL.standardizedFileURL
         let minSize = diskMinSize
 
         isDiskScanning = true
-        diskFolders = []
         diskLargeFiles = []
+        diskFolderTask?.cancel()
 
-        let folderTask = Task.detached(priority: .userInitiated) {
-            await DiskAnalyzer.folderUsage(of: root)
-        }
-        let fileTask = Task.detached(priority: .userInitiated) {
+        let cached = FolderSizeCache.load(root: root)
+        diskFolders = cached?.folders ?? []
+
+        let needsFolderScan = forceFolders || cached == nil || cached?.isFresh == false
+        isDiskFolderScanning = needsFolderScan
+
+        // Dung lượng thư mục: hiển thị dần từng thư mục khi đo xong.
+        let folderTask: Task<Void, Never>? = needsFolderScan
+            ? Task.detached(priority: .userInitiated) { [weak self] in
+                let result = await DiskAnalyzer.folderUsage(of: root) { partial in
+                    Task { @MainActor [weak self] in
+                        guard let self,
+                              generation == self.diskScanGeneration,
+                              self.diskRootURL.standardizedFileURL == root else { return }
+                        self.applyPartialFolder(partial)
+                    }
+                }
+                await MainActor.run { [weak self] in
+                    guard let self, generation == self.diskScanGeneration else { return }
+                    if !result.isEmpty {
+                        self.diskFolders = result
+                        FolderSizeCache.save(root: root, folders: result)
+                    }
+                    self.isDiskFolderScanning = false
+                }
+            }
+            : nil
+        diskFolderTask = folderTask
+
+        // Danh sách tệp lớn: xong sau ~1 giây, không chờ đo dung lượng thư mục.
+        let files = await Task.detached(priority: .userInitiated) {
             DiskAnalyzer.largeFiles(in: root, minSize: minSize)
-        }
+        }.value
 
-        // Hiển thị danh sách tệp ngay khi quét xong (nhanh hơn nhiều so với đo dung lượng thư mục).
-        let files = await fileTask.value
         guard generation == diskScanGeneration else { return }
         diskLargeFiles = files
-
-        let folders = await folderTask.value
-        guard generation == diskScanGeneration else { return }
-        diskFolders = folders
         diskHasScanned = true
         diskStats = AppScanner.getDiskStats()
         isDiskScanning = false
+
+        await folderTask?.value
+    }
+
+    private func applyPartialFolder(_ folder: FolderUsage) {
+        if let index = diskFolders.firstIndex(where: { $0.id == folder.id }) {
+            diskFolders[index] = folder
+        } else {
+            diskFolders.append(folder)
+        }
+        diskFolders.sort { $0.sizeBytes > $1.sizeBytes }
     }
 
     /// Chỉ quét lại danh sách tệp lớn, giữ nguyên dung lượng thư mục đang hiển thị.
@@ -705,12 +740,6 @@ final class AppStoreViewModel: ObservableObject {
         diskLargeFiles = files
         diskStats = AppScanner.getDiskStats()
         isDiskScanning = false
-
-        let folders = await Task.detached(priority: .userInitiated) {
-            await DiskAnalyzer.folderUsage(of: root)
-        }.value
-        guard generation == diskScanGeneration else { return }
-        diskFolders = folders
     }
 
     func setDiskRoot(_ url: URL) async {
@@ -772,6 +801,6 @@ final class AppStoreViewModel: ObservableObject {
             showBanner(result.errors.first ?? "Không thể chuyển các tệp đã chọn.", isError: true)
         }
 
-        await rescanDiskFiles()
+        await scanDisk(forceFolders: true)
     }
 }

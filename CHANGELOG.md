@@ -3,6 +3,24 @@
 Mọi thay đổi đáng chú ý của Mac App Cleaner được ghi ở đây.
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
+## [1.1.1] — 2026-11-14
+
+### Sửa lỗi
+
+- **Tab Giám sát bị treo**: `ps` xuất 65.293 byte trong khi bộ đệm pipe chỉ 64 KB, khiến `waitUntilExit()` chờ vô hạn. Đã thay bằng `libproc` (`proc_listpids` + `proc_pidinfo`), không spawn tiến trình.
+- %CPU giờ tính từ chênh lệch `pti_total_user/system` theo mach timebase (chuẩn hoá bằng `mach_timebase_info`).
+- Nhãn Picker "Phạm vi" bị ép thành một cột chữ dọc ở tab Giám sát.
+- `emptyEntireTrash` đọc hết stderr trước `waitUntilExit()` để tránh deadlock tương tự.
+- Chặn chồng lấn khi timer 2 giây gọi `refreshMonitor()` liên tiếp.
+
+### Hiệu năng
+
+- Tab Giám sát: một lần cập nhật ~30 ms cho ~390 tiến trình (trước đây treo hoặc mất vài giây).
+- Tab Ổ đĩa: đo dung lượng bằng `fts` song song — 18,5 s thay vì 36 s cho ~1 triệu tệp trong `~/Library`; thư mục đầu tiên hiện sau 0,3 s, danh sách tệp sau 1,3 s; UI không bị chặn trong lúc quét.
+- Cache dung lượng thư mục 10 phút (`~/Library/Application Support/MacAppCleaner/folder-size-cache.json`): mở lại tab mất ~1,1 s.
+- Tab Dọn dẹp nhanh hơn ~30% nhờ dùng chung bộ đo `fts`.
+- Huỷ tác vụ đo cũ khi đổi phạm vi hoặc quét lại.
+
 ## [1.1.0] — 2026-11-14
 
 ### Thêm mới

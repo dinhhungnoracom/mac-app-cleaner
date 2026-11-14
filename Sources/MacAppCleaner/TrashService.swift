@@ -54,7 +54,7 @@ enum TrashService {
                     let date = values?.addedToDirectoryDate
                         ?? values?.contentModificationDate
                         ?? values?.creationDate
-                    let size = AppScanner.allocatedSize(of: url)
+                    let size = FastDiskSize.allocatedSize(of: url)
                     return TrashItem(
                         id: url.standardizedFileURL.path,
                         name: url.lastPathComponent,
@@ -118,11 +118,12 @@ enum TrashService {
 
         do {
             try process.run()
+            // Đọc hết pipe TRƯỚC khi waitUntilExit để tránh deadlock khi output > 64 KB.
+            let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             if process.terminationStatus == 0 {
                 return (true, nil)
             }
-            let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
             let errText = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
             return (false, errText?.isEmpty == false ? errText : "Không thể dọn sạch Thùng rác.")
         } catch {

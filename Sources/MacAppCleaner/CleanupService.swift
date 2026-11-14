@@ -291,7 +291,7 @@ enum CleanupScanner {
         await withTaskGroup(of: JunkItem?.self) { group in
             for (url, label) in found {
                 group.addTask {
-                    let size = AppScanner.allocatedSize(of: url)
+                    let size = FastDiskSize.allocatedSize(of: url)
                     guard size >= 1024 * 1024 else { return nil }
                     let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
                     return JunkItem(
@@ -401,7 +401,7 @@ enum CleanupScanner {
         await withTaskGroup(of: JunkItem?.self) { group in
             for (url, detail) in entries {
                 group.addTask {
-                    let size = AppScanner.allocatedSize(of: url)
+                    let size = FastDiskSize.allocatedSize(of: url)
                     guard size > 0, size >= minimumSize else { return nil }
                     let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
                     let displayName = displayNames[url.standardizedFileURL.path] ?? url.lastPathComponent

@@ -10,14 +10,22 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple&style=flat-square)](https://apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white&style=flat-square)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.1.0-green.svg?style=flat-square)](releases/)
+[![Release](https://img.shields.io/badge/Release-v1.1.1-green.svg?style=flat-square)](releases/)
 [![GitHub Pages](https://img.shields.io/badge/Website-GitHub%20Pages-blueviolet?style=flat-square)](https://dinhhungnoracom.github.io/mac-app-cleaner/)
 
-[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.1.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
+[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.1.1.dmg) • [**Báo lỗi (Issues)**](../../issues)
 
 </div>
 
 ---
+
+## 🆕 Có gì mới ở v1.1.1
+
+- **Tab Giám sát nhanh hơn ~100×**: thay lệnh `ps` bằng `libproc`, hết tình trạng treo khi danh sách tiến trình dài (output `ps` vượt bộ đệm pipe 64 KB). Một lần cập nhật còn ~30 ms thay vì vài giây.
+- **Tab Ổ đĩa không còn chặn UI**: dung lượng thư mục được đo song song và hiển thị dần (thư mục đầu tiên sau ~0,3 s, danh sách tệp sau ~1,3 s), kết quả được cache 10 phút nên mở lại gần như tức thì.
+- **Quét dung lượng nhanh gấp đôi**: dùng `fts` (cùng cơ chế `du`) thay vì `FileManager.enumerator`.
+- **Tab Dọn dẹp nhanh hơn** (~30%) nhờ dùng chung bộ đo dung lượng mới.
+- Sửa lỗi nhãn Picker bị ép dọc ở tab Giám sát.
 
 ## 🆕 Có gì mới ở v1.1.0
 
@@ -55,12 +63,12 @@
 ## 🚀 Tải về & Cài đặt / Download & Install
 
 ### Cách 1: Tải file `.dmg` (Khuyên dùng)
-1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.1.0.dmg) hoặc mục [Releases](../../releases).
-2. Mở file `MacAppCleaner-v1.1.0.dmg`.
+1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.1.1.dmg) hoặc mục [Releases](../../releases).
+2. Mở file `MacAppCleaner-v1.1.1.dmg`.
 3. Kéo biểu tượng **MacAppCleaner** vào thư mục **Applications**.
 
 ### Cách 2: Tải file `.zip`
-Tải bản [MacAppCleaner-v1.1.0.zip](docs/downloads/MacAppCleaner-v1.1.0.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
+Tải bản [MacAppCleaner-v1.1.1.zip](docs/downloads/MacAppCleaner-v1.1.1.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
 
 ---
 
@@ -156,8 +164,8 @@ mac-app-cleaner/
 │   ├── assets/                    # Favicon & icon
 │   └── downloads/                 # File .dmg, .zip & checksums
 ├── releases/                      # Thư mục lưu bản release build
-│   ├── MacAppCleaner-v1.1.0.dmg
-│   ├── MacAppCleaner-v1.1.0.zip
+│   ├── MacAppCleaner-v1.1.1.dmg
+│   ├── MacAppCleaner-v1.1.1.zip
 │   └── checksums.sha256
 ├── .github/workflows/build.yml    # CI/CD tự động build & release
 ├── build_app.sh                   # Script build .app
