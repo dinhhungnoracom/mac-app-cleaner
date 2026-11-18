@@ -3,6 +3,25 @@
 Mọi thay đổi đáng chú ý của Mac App Cleaner được ghi ở đây.
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
+## [1.2.0] — 2026-11-18
+
+### Thêm mới
+
+- **Tab "RAR → ZIP"**: chuyển file `.rar` (macOS không mở được) thành `.zip` đọc được ngay.
+  - Kéo–thả nhiều file hoặc chọn từ hộp thoại; hàng đợi hiển thị tiến độ từng file.
+  - Nơi lưu: cùng thư mục gốc, Downloads, hoặc thư mục tuỳ chọn.
+  - Dùng `libarchive` có sẵn trên macOS (`/usr/bin/bsdtar`) — không cần cài thêm phần mềm.
+  - Hỗ trợ RAR4 và RAR5; giữ nguyên cấu trúc thư mục, thư mục rỗng và symlink.
+  - Ô mật khẩu cho RAR mã hoá; cảnh báo khi file là RAR nhiều phần (multi-volume).
+  - Huỷ giữa chừng, tuỳ chọn xoá file RAR gốc (vào Thùng rác) và mở Finder khi xong.
+  - Không ghi đè: file trùng tên được đặt thành `ten (2).zip`, `ten (3).zip`...
+  - Kiểm tra chữ ký RAR trước khi chạy, từ chối file giả mạo.
+
+### Sửa lỗi
+
+- `ByteFormat` hiển thị "0 KB" thay vì "Zero bytes" cho giá trị 0.
+- Header gọn hơn (nút Cập nhật chỉ còn icon) để chứa 6 tab ở cửa sổ 1080 px.
+
 ## [1.1.1] — 2026-11-14
 
 ### Sửa lỗi

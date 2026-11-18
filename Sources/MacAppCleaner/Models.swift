@@ -72,6 +72,7 @@ enum MainTab: String, CaseIterable, Identifiable {
     case apps = "Ứng dụng"
     case cleanup = "Dọn dẹp"
     case disk = "Ổ đĩa"
+    case rarToZip = "RAR → ZIP"
     case trash = "Thùng rác"
     case monitor = "Giám sát"
 
@@ -84,6 +85,7 @@ enum MainTab: String, CaseIterable, Identifiable {
         case .apps: return "square.grid.2x2"
         case .cleanup: return "sparkles"
         case .disk: return "internaldrive"
+        case .rarToZip: return "doc.zipper"
         case .trash: return "trash"
         case .monitor: return "waveform.path.ecg"
         }
@@ -194,6 +196,7 @@ enum ByteFormat {
     }()
 
     static func string(from bytes: Int64) -> String {
-        formatter.string(fromByteCount: max(0, bytes))
+        if bytes <= 0 { return "0 KB" }
+        return formatter.string(fromByteCount: bytes)
     }
 }

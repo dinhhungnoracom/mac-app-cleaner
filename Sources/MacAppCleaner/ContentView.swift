@@ -32,6 +32,8 @@ struct ContentView: View {
                 CleanupView(vm: vm)
             case .disk:
                 DiskAnalyzerView(vm: vm)
+            case .rarToZip:
+                RarToZipView(vm: vm)
             case .trash:
                 TrashView(vm: vm)
             case .monitor:
@@ -104,7 +106,7 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            .frame(width: 232, alignment: .leading)
+            .frame(width: 208, alignment: .leading)
 
             tabBar
 
@@ -116,9 +118,9 @@ struct ContentView: View {
                         .font(.caption.weight(.medium))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                        .frame(width: 188, alignment: .trailing)
+                        .frame(width: 172, alignment: .trailing)
                     ProgressView(value: disk.usedFraction)
-                        .frame(width: 140)
+                        .frame(width: 130)
                 }
             }
 
@@ -131,6 +133,8 @@ struct ContentView: View {
                         await vm.scanJunk()
                     case .disk:
                         await vm.scanDisk()
+                    case .rarToZip:
+                        break
                     case .trash:
                         await vm.refreshTrash()
                     case .monitor:
@@ -146,10 +150,12 @@ struct ContentView: View {
                             .fixedSize()
                     }
                 } else {
-                    Label("Cập nhật", systemImage: "arrow.clockwise")
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 13, weight: .semibold))
                 }
             }
             .buttonStyle(.borderedProminent)
+            .help("Cập nhật (⌘R)")
             .disabled(vm.isScanning || vm.isScanningTrash || vm.isRefreshingMonitor || vm.isRemoving)
         }
         .padding(.horizontal, 16)

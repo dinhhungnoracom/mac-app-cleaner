@@ -803,4 +803,176 @@ final class AppStoreViewModel: ObservableObject {
 
         await scanDisk(forceFolders: true)
     }
+
+    // MARK: - RAR → ZIP
+
+    @Published var rarJobs: [RarJob] = []
+    @Published var rarOutputMode: RarOutputMode = .sameFolder
+    @Published var rarCustomOutputDirectory: URL?
+    @Published var rarDeleteOriginal: Bool = false
+    @Published var rarRevealInFinder: Bool = true
+    @Published var rarPassword: String = ""
+    @Published var isConvertingRAR: Bool = false
+
+    private var rarTask: RarConversionTask?
+
+    var rarPendingJobs: [RarJob] {
+        rarJobs.filter { !$0.status.isFinished && !$0.status.isWorking }
+    }
+
+    var rarCompletedCount: Int {
+        rarJobs.filter { $0.status.isFinished }.count
+    }
+
+    var rarSourceBytes: Int64 {
+        rarJobs.reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    var rarOutputBytes: Int64 {
+        rarJobs.reduce(0) { partial, job in
+            if case .done(_, let bytes) = job.status {
+                return partial + bytes
+            }
+            return partial
+        }
+    }
+
+    var rarOutputLabel: String {
+        switch rarOutputMode {
+        case .sameFolder: return "Lưu cùng thư mục gốc"
+        case .downloads: return "Lưu vào Downloads"
+        case .custom: return rarCustomOutputDirectory?.lastPathComponent ?? "Thư mục tuỳ chọn"
+        }
+    }
+
+    func addRarFiles(_ urls: [URL]) {
+        var rejected = 0
+        for url in urls {
+            let standardized = url.standardizedFileURL
+            guard !rarJobs.contains(where: { $0.id == standardized.path }) else { continue }
+            guard RarConverter.isRarFile(standardized), RarConverter.isRarSignature(standardized) else {
+                rejected += 1
+                continue
+            }
+            let values = try? standardized.resourceValues(forKeys: [.fileSizeKey])
+            rarJobs.append(
+                RarJob(
+                    id: standardized.path,
+                    source: standardized,
+                    name: standardized.lastPathComponent,
+                    sizeBytes: Int64(values?.fileSize ?? 0)
+                )
+            )
+        }
+
+        if rejected > 0 {
+            showBanner("Đã bỏ qua \(rejected) tệp không phải RAR hợp lệ.", isError: true)
+        }
+    }
+
+    func removeRarJob(_ job: RarJob) {
+        rarJobs.removeAll { $0.id == job.id }
+    }
+
+    func clearRarJobs() {
+        guard !isConvertingRAR else { return }
+        rarJobs.removeAll()
+    }
+
+    func setRarOutputDirectory(_ url: URL) {
+        rarCustomOutputDirectory = url
+        rarOutputMode = .custom
+    }
+
+    func cancelRarConversion() {
+        rarTask?.cancel()
+    }
+
+    func convertRarJobs() async {
+        guard !isConvertingRAR else { return }
+
+        let indices = rarJobs.indices.filter {
+            !rarJobs[$0].status.isFinished && !rarJobs[$0].status.isWorking
+        }
+        guard !indices.isEmpty else { return }
+
+        isConvertingRAR = true
+        let task = RarConversionTask()
+        rarTask = task
+        let password = rarPassword
+
+        var outputs: [URL] = []
+        var failures = 0
+
+        for index in indices {
+            if task.isCancelled { break }
+
+            let job = rarJobs[index]
+            let destination = resolvedRarDestination(for: job.source)
+            rarJobs[index].status = .working(0)
+
+            do {
+                let outcome = try await Task.detached(priority: .userInitiated) { () throws -> RarConvertOutcome in
+                    try RarConverter.convert(
+                        source: job.source,
+                        destination: destination,
+                        password: password,
+                        task: task
+                    ) { progress in
+                        Task { @MainActor [weak self] in
+                            guard let self,
+                                  let jobIndex = self.rarJobs.firstIndex(where: { $0.id == job.id }),
+                                  self.rarJobs[jobIndex].status.isWorking else { return }
+                            self.rarJobs[jobIndex].status = .working(progress)
+                        }
+                    }
+                }.value
+
+                if let jobIndex = rarJobs.firstIndex(where: { $0.id == job.id }) {
+                    rarJobs[jobIndex].status = .done(output: outcome.outputURL, bytes: outcome.outputBytes)
+                }
+                outputs.append(outcome.outputURL)
+
+                if rarDeleteOriginal {
+                    try? FileManager.default.trashItem(at: job.source, resultingItemURL: nil)
+                }
+            } catch {
+                failures += 1
+                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                if let jobIndex = rarJobs.firstIndex(where: { $0.id == job.id }) {
+                    rarJobs[jobIndex].status = .failed(message)
+                }
+                if task.isCancelled { break }
+            }
+        }
+
+        isConvertingRAR = false
+        rarTask = nil
+
+        if task.isCancelled {
+            showBanner("Đã huỷ chuyển đổi RAR.", isError: true)
+        } else if outputs.isEmpty {
+            showBanner("Không chuyển được file nào. Kiểm tra mật khẩu hoặc định dạng RAR.", isError: true)
+        } else {
+            let suffix = failures > 0 ? " (\(failures) lỗi)" : ""
+            showBanner("Đã chuyển \(outputs.count) file sang ZIP\(suffix).", isError: failures > 0)
+        }
+
+        if rarRevealInFinder, !outputs.isEmpty {
+            NSWorkspace.shared.activateFileViewerSelecting(outputs)
+        }
+    }
+
+    private func resolvedRarDestination(for source: URL) -> URL {
+        let directory: URL
+        switch rarOutputMode {
+        case .sameFolder:
+            directory = source.deletingLastPathComponent()
+        case .downloads:
+            directory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        case .custom:
+            directory = rarCustomOutputDirectory ?? source.deletingLastPathComponent()
+        }
+        return RarConverter.availableDestination(for: source, in: directory)
+    }
 }
