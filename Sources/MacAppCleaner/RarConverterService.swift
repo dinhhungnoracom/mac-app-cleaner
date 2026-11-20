@@ -31,7 +31,7 @@ struct RarJob: Identifiable {
     var path: String { source.path }
 }
 
-enum RarOutputMode: String, CaseIterable, Identifiable {
+enum ConversionOutputMode: String, CaseIterable, Identifiable {
     case sameFolder
     case downloads
     case custom

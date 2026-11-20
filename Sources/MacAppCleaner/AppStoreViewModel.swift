@@ -807,7 +807,7 @@ final class AppStoreViewModel: ObservableObject {
     // MARK: - RAR → ZIP
 
     @Published var rarJobs: [RarJob] = []
-    @Published var rarOutputMode: RarOutputMode = .sameFolder
+    @Published var rarOutputMode: ConversionOutputMode = .sameFolder
     @Published var rarCustomOutputDirectory: URL?
     @Published var rarDeleteOriginal: Bool = false
     @Published var rarRevealInFinder: Bool = true
@@ -974,5 +974,167 @@ final class AppStoreViewModel: ObservableObject {
             directory = rarCustomOutputDirectory ?? source.deletingLastPathComponent()
         }
         return RarConverter.availableDestination(for: source, in: directory)
+    }
+
+    // MARK: - BAT → SH
+
+    @Published var batJobs: [BatJob] = []
+    @Published var selectedBatJobID: String?
+    @Published var batOutputMode: ConversionOutputMode = .sameFolder
+    @Published var batCustomOutputDirectory: URL?
+    @Published var batMakeExecutable: Bool = true
+    @Published var batRevealInFinder: Bool = true
+    @Published var isSavingBAT: Bool = false
+
+    var selectedBatJob: BatJob? {
+        guard let selectedBatJobID else { return nil }
+        return batJobs.first { $0.id == selectedBatJobID }
+    }
+
+    var batSavedCount: Int {
+        batJobs.filter { $0.status.isSaved }.count
+    }
+
+    var batReadyCount: Int {
+        batJobs.filter { $0.result != nil && !$0.status.isSaved }.count
+    }
+
+    var batIssueCount: Int {
+        batJobs.reduce(0) { $0 + ($1.result?.warningCount ?? 0) }
+    }
+
+    var batOutputLabel: String {
+        switch batOutputMode {
+        case .sameFolder: return "Lưu cùng thư mục gốc"
+        case .downloads: return "Lưu vào Downloads"
+        case .custom: return batCustomOutputDirectory?.lastPathComponent ?? "Thư mục tuỳ chọn"
+        }
+    }
+
+    func addBatFiles(_ urls: [URL]) {
+        var rejected = 0
+
+        for url in urls {
+            let standardized = url.standardizedFileURL
+            guard !batJobs.contains(where: { $0.id == standardized.path }) else { continue }
+
+            let ext = standardized.pathExtension.lowercased()
+            guard ext == "bat" || ext == "cmd" else {
+                rejected += 1
+                continue
+            }
+
+            let values = try? standardized.resourceValues(forKeys: [.fileSizeKey])
+            let size = Int64(values?.fileSize ?? 0)
+
+            do {
+                let result = try BatToShConverter.convert(contentsOf: standardized)
+                batJobs.append(
+                    BatJob(
+                        id: standardized.path,
+                        source: standardized,
+                        name: standardized.lastPathComponent,
+                        sizeBytes: size,
+                        result: result,
+                        status: .ready
+                    )
+                )
+                if selectedBatJobID == nil {
+                    selectedBatJobID = standardized.path
+                }
+            } catch {
+                batJobs.append(
+                    BatJob(
+                        id: standardized.path,
+                        source: standardized,
+                        name: standardized.lastPathComponent,
+                        sizeBytes: size,
+                        result: nil,
+                        status: .failed(error.localizedDescription)
+                    )
+                )
+            }
+        }
+
+        if rejected > 0 {
+            showBanner("Đã bỏ qua \(rejected) tệp không phải .bat/.cmd.", isError: true)
+        }
+    }
+
+    func removeBatJob(_ job: BatJob) {
+        batJobs.removeAll { $0.id == job.id }
+        if selectedBatJobID == job.id {
+            selectedBatJobID = batJobs.first?.id
+        }
+    }
+
+    func clearBatJobs() {
+        guard !isSavingBAT else { return }
+        batJobs.removeAll()
+        selectedBatJobID = nil
+    }
+
+    func setBatOutputDirectory(_ url: URL) {
+        batCustomOutputDirectory = url
+        batOutputMode = .custom
+    }
+
+    func saveBatScripts() async {
+        guard !isSavingBAT else { return }
+        let targets = batJobs.filter { $0.result != nil && !$0.status.isSaved }
+        guard !targets.isEmpty else { return }
+
+        isSavingBAT = true
+        defer { isSavingBAT = false }
+
+        var savedURLs: [URL] = []
+        var failures = 0
+
+        for job in targets {
+            guard let result = job.result else { continue }
+            let directory = resolvedBatDestinationDirectory(for: job.source)
+            let destination = BatToShConverter.availableDestination(for: job.source, in: directory)
+
+            do {
+                try result.script.write(to: destination, atomically: true, encoding: .utf8)
+                if batMakeExecutable {
+                    try? FileManager.default.setAttributes(
+                        [.posixPermissions: 0o755],
+                        ofItemAtPath: destination.path
+                    )
+                }
+                if let index = batJobs.firstIndex(where: { $0.id == job.id }) {
+                    batJobs[index].status = .saved(destination)
+                }
+                savedURLs.append(destination)
+            } catch {
+                failures += 1
+                if let index = batJobs.firstIndex(where: { $0.id == job.id }) {
+                    batJobs[index].status = .failed(error.localizedDescription)
+                }
+            }
+        }
+
+        if savedURLs.isEmpty {
+            showBanner("Không lưu được file .sh nào.", isError: true)
+        } else {
+            let suffix = failures > 0 ? " (\(failures) lỗi)" : ""
+            showBanner("Đã lưu \(savedURLs.count) file .sh\(suffix).", isError: failures > 0)
+        }
+
+        if batRevealInFinder, !savedURLs.isEmpty {
+            NSWorkspace.shared.activateFileViewerSelecting(savedURLs)
+        }
+    }
+
+    private func resolvedBatDestinationDirectory(for source: URL) -> URL {
+        switch batOutputMode {
+        case .sameFolder:
+            return source.deletingLastPathComponent()
+        case .downloads:
+            return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        case .custom:
+            return batCustomOutputDirectory ?? source.deletingLastPathComponent()
+        }
     }
 }

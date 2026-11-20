@@ -34,6 +34,8 @@ struct ContentView: View {
                 DiskAnalyzerView(vm: vm)
             case .rarToZip:
                 RarToZipView(vm: vm)
+            case .batToSh:
+                BatToShView(vm: vm)
             case .trash:
                 TrashView(vm: vm)
             case .monitor:
@@ -133,7 +135,7 @@ struct ContentView: View {
                         await vm.scanJunk()
                     case .disk:
                         await vm.scanDisk()
-                    case .rarToZip:
+                    case .rarToZip, .batToSh:
                         break
                     case .trash:
                         await vm.refreshTrash()
@@ -143,12 +145,7 @@ struct ContentView: View {
                 }
             } label: {
                 if vm.isScanning || vm.isScanningTrash || vm.isRefreshingMonitor {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("Đang tải...")
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
+                    ProgressView().controlSize(.small)
                 } else {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 13, weight: .semibold))
@@ -267,7 +264,7 @@ struct ContentView: View {
                         Image(systemName: tab.symbolName)
                             .font(.system(size: 12, weight: .semibold))
                         Text(tab.title)
-                            .font(.callout.weight(vm.activeTab == tab ? .semibold : .regular))
+                            .font(.caption.weight(vm.activeTab == tab ? .semibold : .regular))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                         if tab == .trash, !vm.trashItems.isEmpty {
@@ -280,8 +277,8 @@ struct ContentView: View {
                                 .cornerRadius(999)
                         }
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 5)
                     .foregroundColor(vm.activeTab == tab ? .white : .primary)
                     .background(
                         RoundedRectangle(cornerRadius: 7)

@@ -20,7 +20,7 @@ struct MacAppCleanerApp: App {
     var body: some Scene {
         WindowGroup("Mac App Cleaner") {
             ContentView(vm: vm)
-                .frame(minWidth: 1080, minHeight: 660)
+                .frame(minWidth: 1120, minHeight: 680)
         }
         .defaultSize(width: 1200, height: 780)
         .commands {

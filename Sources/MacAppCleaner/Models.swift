@@ -73,6 +73,7 @@ enum MainTab: String, CaseIterable, Identifiable {
     case cleanup = "Dọn dẹp"
     case disk = "Ổ đĩa"
     case rarToZip = "RAR → ZIP"
+    case batToSh = "BAT → SH"
     case trash = "Thùng rác"
     case monitor = "Giám sát"
 
@@ -86,6 +87,7 @@ enum MainTab: String, CaseIterable, Identifiable {
         case .cleanup: return "sparkles"
         case .disk: return "internaldrive"
         case .rarToZip: return "doc.zipper"
+        case .batToSh: return "terminal"
         case .trash: return "trash"
         case .monitor: return "waveform.path.ecg"
         }

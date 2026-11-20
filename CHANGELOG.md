@@ -3,6 +3,30 @@
 Mọi thay đổi đáng chú ý của Mac App Cleaner được ghi ở đây.
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
+## [1.3.0] — 2026-11-20
+
+### Thêm mới
+
+- **Tab "BAT → SH"**: dịch file batch Windows (.bat/.cmd) sang shell script chạy trên macOS.
+  - Kéo–thả nhiều file; xem trước script và danh sách cảnh báo theo từng dòng trước khi lưu.
+  - Dịch các lệnh phổ biến: `echo` (kể cả chuyển hướng `>` / `>>`), `set`, `set /a`, `set /p`,
+    `if exist/defined/errorlevel`, `if ... ==`, `for ... in`, `cd`, `md`, `rd`, `del`,
+    `copy`, `xcopy`, `move`, `ren`, `type`, `cls`, `pause`, `timeout`, `exit /b`,
+    `call`, `where`, `findstr`, `start`.
+  - Dịch biến `%VAR%`, tham số `%1..%9`, `%*`, `%~dp0`; biến vòng lặp `%%f` và
+    modifier `%%~nf`, `%%~xf`, `%%~pf`.
+  - Giữ cấu trúc khối `if/else/for`; khối không hỗ trợ bị comment kèm TODO thay vì chạy sai.
+  - Cảnh báo rõ khi gặp đường dẫn ổ Windows (`C:\...`), `goto`, `for /f`, hoặc lệnh lạ.
+  - Lưu `.sh` cùng thư mục gốc / Downloads / thư mục tuỳ chọn, tuỳ chọn `chmod +x`;
+    **không bao giờ tự chạy** script.
+- Dùng chung enum `ConversionOutputMode` cho cả hai công cụ chuyển đổi.
+
+### Thay đổi
+
+- Header chứa 7 tab: thu gọn nhãn tab, nút Cập nhật chỉ còn icon, chiều rộng cửa sổ
+  tối thiểu 1120 px.
+- Trạng thái đang tải của nút Cập nhật chỉ còn spinner (không còn chữ gây tràn header).
+
 ## [1.2.0] — 2026-11-18
 
 ### Thêm mới
