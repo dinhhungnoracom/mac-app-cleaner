@@ -3,6 +3,24 @@
 Mọi thay đổi đáng chú ý của Mac App Cleaner được ghi ở đây.
 Định dạng dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
+## [1.4.0] — 2026-11-20
+
+### Sửa lỗi
+
+- **File chuyển xong không chạy khi double-click**: macOS mở `.sh` bằng trình soạn thảo,
+  đây là hành vi của hệ điều hành chứ không phải lỗi dịch. Đã bổ sung định dạng `.command`
+  và đặt làm mặc định — double-click là chạy ngay trong Terminal.
+- `.command` luôn được cấp quyền `755` kể cả khi tắt tuỳ chọn chmod (bắt buộc để chạy).
+
+### Thêm mới
+
+- Chọn định dạng đầu ra: `.command (double-click)` hoặc `.sh (Terminal)`.
+- Nút **Chạy** trong khung preview (có hộp thoại xác nhận):
+  - `.command`: mở trực tiếp như double-click.
+  - `.sh`: mở Terminal và chạy `bash <file>` qua AppleScript.
+- Đổi định dạng sẽ đặt lại trạng thái "Đã lưu" để có thể lưu lại đúng định dạng mới.
+- Nhãn nút lưu và thẻ thống kê thay đổi theo định dạng đang chọn.
+
 ## [1.3.0] — 2026-11-20
 
 ### Thêm mới

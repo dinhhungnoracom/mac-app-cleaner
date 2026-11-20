@@ -6,6 +6,8 @@ struct BatToShView: View {
     @ObservedObject var vm: AppStoreViewModel
 
     @State private var isDropTargeted = false
+    @State private var pendingRunJob: BatJob?
+    @State private var showRunConfirm = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +21,17 @@ struct BatToShView: View {
         }
         .onDrop(of: [UTType.fileURL], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
+        }
+        .alert("Chạy script trong Terminal?", isPresented: $showRunConfirm) {
+            Button("Huỷ", role: .cancel) { pendingRunJob = nil }
+            Button("Chạy", role: .destructive) {
+                if let job = pendingRunJob {
+                    vm.runBatScript(job)
+                }
+                pendingRunJob = nil
+            }
+        } message: {
+            Text("Script sẽ chạy với quyền của bạn trên máy này. Chỉ chạy khi bạn đã đọc preview và hiểu nội dung.")
         }
         .overlay {
             if isDropTargeted {
@@ -51,9 +64,11 @@ struct BatToShView: View {
                 accent: .primary
             )
             BatStatCard(
-                title: "Đã lưu .sh",
+                title: "Đã lưu script",
                 value: "\(vm.batSavedCount)",
-                subtitle: vm.batMakeExecutable ? "Có quyền chạy (chmod +x)" : "Chưa cấp quyền chạy",
+                subtitle: vm.batOutputFormat == .command
+                    ? "Định dạng .command — double-click để chạy"
+                    : "Định dạng .sh — mở bằng Terminal",
                 accent: .green
             )
             BatStatCard(
@@ -111,7 +126,7 @@ struct BatToShView: View {
                         Text("Đang lưu...")
                     }
                 } else {
-                    Label("Lưu .sh (\(vm.batReadyCount))", systemImage: "square.and.arrow.down")
+                    Label("Lưu .\(vm.batOutputFormat.fileExtension) (\(vm.batReadyCount))", systemImage: "square.and.arrow.down")
                 }
             }
             .buttonStyle(.borderedProminent)
@@ -124,6 +139,15 @@ struct BatToShView: View {
 
     private var optionsBar: some View {
         HStack(spacing: 14) {
+            Picker("Định dạng", selection: $vm.batOutputFormat) {
+                ForEach(BatOutputFormat.allCases) { format in
+                    Text(format.shortTitle).tag(format)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 195)
+
             Toggle("Cấp quyền chạy (chmod +x)", isOn: $vm.batMakeExecutable)
                 .toggleStyle(.checkbox)
                 .font(.caption)
@@ -133,9 +157,10 @@ struct BatToShView: View {
 
             Spacer()
 
-            Text("Script chỉ được lưu, không tự chạy.")
+            Text("macOS mở .sh bằng trình soạn thảo — chọn .command để double-click là chạy.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -203,6 +228,16 @@ struct BatToShView: View {
                             Label("Sao chép", systemImage: "doc.on.doc")
                         }
                         .controlSize(.small)
+                    }
+                    if case .saved = job.status {
+                        Button {
+                            pendingRunJob = job
+                            showRunConfirm = true
+                        } label: {
+                            Label("Chạy", systemImage: "play.fill")
+                        }
+                        .controlSize(.small)
+                        .tint(.green)
                     }
                 }
                 .padding(.horizontal, 12)
@@ -329,9 +364,11 @@ struct BatToShView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
 
-            Text("Batch ≠ shell: luôn xem preview và kiểm thử trước khi chạy.")
+            Text("Batch ≠ shell: luôn xem preview và kiểm thử trước khi chạy. File .sh mở bằng trình soạn thảo khi double-click; chọn .command nếu muốn chạy ngay.")
                 .font(.caption)
                 .foregroundColor(.orange)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 520)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()

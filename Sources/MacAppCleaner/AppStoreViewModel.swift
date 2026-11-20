@@ -981,6 +981,16 @@ final class AppStoreViewModel: ObservableObject {
     @Published var batJobs: [BatJob] = []
     @Published var selectedBatJobID: String?
     @Published var batOutputMode: ConversionOutputMode = .sameFolder
+    @Published var batOutputFormat: BatOutputFormat = .command {
+        didSet {
+            guard oldValue != batOutputFormat else { return }
+            for index in batJobs.indices {
+                if batJobs[index].status.isSaved {
+                    batJobs[index].status = .ready
+                }
+            }
+        }
+    }
     @Published var batCustomOutputDirectory: URL?
     @Published var batMakeExecutable: Bool = true
     @Published var batRevealInFinder: Bool = true
@@ -1093,11 +1103,16 @@ final class AppStoreViewModel: ObservableObject {
         for job in targets {
             guard let result = job.result else { continue }
             let directory = resolvedBatDestinationDirectory(for: job.source)
-            let destination = BatToShConverter.availableDestination(for: job.source, in: directory)
+            let destination = BatToShConverter.availableDestination(
+                for: job.source,
+                in: directory,
+                fileExtension: batOutputFormat.fileExtension
+            )
 
             do {
                 try result.script.write(to: destination, atomically: true, encoding: .utf8)
-                if batMakeExecutable {
+                // File .command bắt buộc có quyền chạy thì double-click mới chạy.
+                if batMakeExecutable || batOutputFormat == .command {
                     try? FileManager.default.setAttributes(
                         [.posixPermissions: 0o755],
                         ofItemAtPath: destination.path
@@ -1124,6 +1139,36 @@ final class AppStoreViewModel: ObservableObject {
 
         if batRevealInFinder, !savedURLs.isEmpty {
             NSWorkspace.shared.activateFileViewerSelecting(savedURLs)
+        }
+    }
+
+    func runBatScript(_ job: BatJob) {
+        guard case .saved(let url) = job.status else { return }
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: url.path
+        )
+
+        if url.pathExtension.lowercased() == "command" {
+            NSWorkspace.shared.open(url)
+            return
+        }
+
+        let path = url.path
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let source = """
+        tell application "Terminal"
+            activate
+            do script "bash \\\"\(path)\\\""
+        end tell
+        """
+
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error {
+            let message = error[NSAppleScript.errorMessage] as? String ?? "không rõ lỗi"
+            showBanner("Không mở được Terminal: \(message)", isError: true)
         }
     }
 

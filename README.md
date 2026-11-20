@@ -10,14 +10,20 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-black?logo=apple&style=flat-square)](https://apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white&style=flat-square)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.3.0-green.svg?style=flat-square)](releases/)
+[![Release](https://img.shields.io/badge/Release-v1.4.0-green.svg?style=flat-square)](releases/)
 [![GitHub Pages](https://img.shields.io/badge/Website-GitHub%20Pages-blueviolet?style=flat-square)](https://dinhhungnoracom.github.io/mac-app-cleaner/)
 
-[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.3.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
+[**🌐 Trang chủ & Tải về (Website)**](https://dinhhungnoracom.github.io/mac-app-cleaner/) • [**📦 Tải bản .DMG**](docs/downloads/MacAppCleaner-v1.4.0.dmg) • [**Báo lỗi (Issues)**](../../issues)
 
 </div>
 
 ---
+
+## 🆕 Có gì mới ở v1.4.0
+
+- **BAT → SH xuất được `.command`**: double-click là chạy ngay trong Terminal (trước đây `.sh` bị macOS mở bằng trình soạn thảo).
+- Chọn định dạng `.command` hoặc `.sh`, kèm nút **Chạy** trong preview (có xác nhận).
+- `.command` luôn được `chmod 755`; đổi định dạng sẽ cho phép lưu lại.
 
 ## 🆕 Có gì mới ở v1.3.0
 
@@ -59,7 +65,7 @@
   - `Containers` & `Group Containers`
   - `Logs` & `Saved Application State`
   - `HTTPStorages`, `WebKit`, `LaunchAgents`
-- 🖥️ **Chuyển BAT → SH**: Dịch file batch Windows sang shell script macOS với preview và cảnh báo từng dòng. Các lệnh phổ biến (`echo`, `set`, `if`, `for`, `copy`, `del`, `cd`...) được chuyển tự động; chỗ không tương đương được đánh dấu TODO — script không bao giờ tự chạy.
+- 🖥️ **Chuyển BAT → SH**: Dịch file batch Windows sang `.command` (double-click để chạy) hoặc `.sh`, kèm preview và cảnh báo từng dòng. Các lệnh phổ biến (`echo`, `set`, `if`, `for`, `copy`, `del`, `cd`...) được chuyển tự động; chỗ không tương đương được đánh dấu TODO — script không bao giờ tự chạy.
 - 📦 **Chuyển RAR → ZIP**: Giải nén file `.rar` (macOS không đọc được) rồi đóng gói lại thành `.zip` chuẩn, giữ nguyên cấu trúc thư mục. Hỗ trợ RAR4/RAR5, RAR có mật khẩu, kéo–thả nhiều file và xem tiến độ từng file.
 - 🧼 **Dọn dẹp thông minh (Smart Cleanup)**: Quét một lượt cache ứng dụng, logs, `DerivedData`/`DeviceSupport` của Xcode, bản sao lưu iPhone/iPad, cache trình duyệt và cache trong `Containers`. Xem từng mục, chọn lọc rồi dọn vào Thùng rác hoặc xoá vĩnh viễn.
 - 💽 **Phân tích ổ đĩa (Disk Analyzer)**: Đo dung lượng thực tế của từng thư mục trong Home, drill-down không giới hạn, tìm nhanh các tệp lớn nhất (≥ 50 MB → 1 GB) và chuyển thẳng vào Thùng rác.
@@ -77,12 +83,12 @@
 ## 🚀 Tải về & Cài đặt / Download & Install
 
 ### Cách 1: Tải file `.dmg` (Khuyên dùng)
-1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.3.0.dmg) hoặc mục [Releases](../../releases).
-2. Mở file `MacAppCleaner-v1.3.0.dmg`.
+1. Tải bản mới nhất tại [Trang tải về](docs/downloads/MacAppCleaner-v1.4.0.dmg) hoặc mục [Releases](../../releases).
+2. Mở file `MacAppCleaner-v1.4.0.dmg`.
 3. Kéo biểu tượng **MacAppCleaner** vào thư mục **Applications**.
 
 ### Cách 2: Tải file `.zip`
-Tải bản [MacAppCleaner-v1.3.0.zip](docs/downloads/MacAppCleaner-v1.3.0.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
+Tải bản [MacAppCleaner-v1.4.0.zip](docs/downloads/MacAppCleaner-v1.4.0.zip), giải nén và kéo `MacAppCleaner.app` vào thư mục `/Applications`.
 
 ---
 
@@ -182,8 +188,8 @@ mac-app-cleaner/
 │   ├── assets/                    # Favicon & icon
 │   └── downloads/                 # File .dmg, .zip & checksums
 ├── releases/                      # Thư mục lưu bản release build
-│   ├── MacAppCleaner-v1.3.0.dmg
-│   ├── MacAppCleaner-v1.3.0.zip
+│   ├── MacAppCleaner-v1.4.0.dmg
+│   ├── MacAppCleaner-v1.4.0.zip
 │   └── checksums.sha256
 ├── .github/workflows/build.yml    # CI/CD tự động build & release
 ├── build_app.sh                   # Script build .app

@@ -19,6 +19,34 @@ struct BatConversionResult {
     var warningCount: Int { issues.count }
 }
 
+enum BatOutputFormat: String, CaseIterable, Identifiable {
+    case command
+    case shell
+
+    var id: String { rawValue }
+
+    var fileExtension: String {
+        switch self {
+        case .command: return "command"
+        case .shell: return "sh"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .command: return ".command — double-click để chạy"
+        case .shell: return ".sh — chạy trong Terminal"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .command: return ".command (double-click)"
+        case .shell: return ".sh (Terminal)"
+        }
+    }
+}
+
 enum BatJobStatus: Equatable {
     case ready
     case saved(URL)
@@ -91,13 +119,17 @@ enum BatToShConverter {
         }
     }
 
-    static func availableDestination(for source: URL, in directory: URL) -> URL {
+    static func availableDestination(
+        for source: URL,
+        in directory: URL,
+        fileExtension: String = "sh"
+    ) -> URL {
         let fm = FileManager.default
         let base = source.deletingPathExtension().lastPathComponent
-        var candidate = directory.appendingPathComponent(base + ".sh")
+        var candidate = directory.appendingPathComponent("\(base).\(fileExtension)")
         var index = 2
         while fm.fileExists(atPath: candidate.path) {
-            candidate = directory.appendingPathComponent("\(base) (\(index)).sh")
+            candidate = directory.appendingPathComponent("\(base) (\(index)).\(fileExtension)")
             index += 1
         }
         return candidate
